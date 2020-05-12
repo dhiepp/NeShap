@@ -142,6 +142,6 @@ server.post('/comment/delete', async (req, res) => {
 	res.json(result);
 });
 
-server.listen(port, () => {
+server.listen(process.env.PORT || port, () => {
 	console.log('RESTful API server started on: ' + port);
 });
