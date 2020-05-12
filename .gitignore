@@ -61,3 +61,6 @@ buck-out/
 # Server data
 /server/images/avatar/
 /server/images/cover/
+
+# IOS
+ios/
