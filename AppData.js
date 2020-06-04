@@ -47,6 +47,6 @@ export async function removeUserData() {
   }
 }
 
-const server = 'http://neshap.herokuapp.com/';
+const server = 'http://neshap.herokuapp.com';
 
 export {server};
