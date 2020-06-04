@@ -54,7 +54,7 @@ server.post('/user/edit', upload.single('avatar'), async (req, res) => {
 	let avatar = null;
 	if (req.file !== undefined) {
 		avatar = await sharp(req.file)
-			.resize({ width: 128, fit: 'cover', position: 'center', withoutEnlargement: true })
+			.resize({ width: 256, fit: 'cover', position: 'center', withoutEnlargement: true })
 			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
 	res.json(await UserData.edit(req.query, avatar));
