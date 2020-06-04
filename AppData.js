@@ -47,6 +47,6 @@ export async function removeUserData() {
   }
 }
 
-const server = 'http://127.0.0.1:6969';
+const server = 'http://neshap.herokuapp.com/';
 
 export {server};

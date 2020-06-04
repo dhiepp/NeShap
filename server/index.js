@@ -1,5 +1,6 @@
 const express = require('express');
 const multer = require('multer');
+const sharp = require('sharp');
 const server = express();
 const port = 6969;
 
@@ -30,8 +31,8 @@ server.get('/user/avatar', async (req, res) => {
 		res.sendFile('/images/default_avatar.png', { root: __dirname });
 		return;
 	}
-	res.contentType(result.avatar.contentType);
-	res.send(result.avatar.image.buffer);
+	res.contentType('jpeg');
+	res.send(result.avatar.buffer);
 });
 
 server.get('/user/search', async (req, res) => {
@@ -52,10 +53,9 @@ server.post('/user/delete', async (req, res) => {
 server.post('/user/edit', upload.single('avatar'), async (req, res) => {
 	let avatar = null;
 	if (req.file !== undefined) {
-		avatar = {
-			contentType: req.file.mimetype,
-			image: req.file.buffer,
-		};
+		avatar = await sharp(req.file)
+			.resize({ width: 128, fit: 'cover', position: 'center', withoutEnlargement: true })
+			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
 	res.json(await UserData.edit(req.query, avatar));
 });
@@ -71,10 +71,9 @@ server.post('/user/unfollow', async (req, res) => {
 server.post('/post/write', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
-		cover = {
-			contentType: req.file.mimetype,
-			image: req.file.buffer,
-		};
+		cover = await sharp(req.file)
+			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
 	const result = await PostData.write(req.body.data, cover);
 	res.json(result);
@@ -83,10 +82,9 @@ server.post('/post/write', upload.single('cover'), async (req, res) => {
 server.post('/post/edit', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
-		cover = {
-			contentType: req.file.mimetype,
-			image: req.file.buffer,
-		};
+		cover = await sharp(req.file)
+			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
 	const result = await PostData.edit(req.body.data, cover);
 	res.json(result);
@@ -113,8 +111,8 @@ server.get('/post/cover', async (req, res) => {
 		res.json(null);
 		return;
 	}
-	res.contentType(result.cover.contentType);
-	res.send(result.cover.image.buffer);
+	res.contentType('jpeg');
+	res.send(result.cover.buffer);
 });
 
 server.post('/post/like', async (req, res) => {
