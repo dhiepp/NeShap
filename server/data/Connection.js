@@ -3,7 +3,7 @@ const MongoClient = require('mongodb').MongoClient;
 // Connection URL and database name
 // const url = 'mongodb://localhost:27017';
 // Heroku config var
-const url = process.env.DATABASE_URL;
+const url = process.env.DATABASE_URL || 'mongodb://localhost:27017';
 const dbName = 'neshap';
 let client;
 
