@@ -84,7 +84,7 @@ export default function App() {
         <Stack.Screen
           name="ViewUser"
           component={ViewUserScreen}
-          options={{headerShown: false}}
+          options={{title: 'Trang cá nhân'}}
         />
         <Stack.Screen
           name="ListUser"
@@ -104,7 +104,7 @@ export default function App() {
         <Stack.Screen
           name="ViewPost"
           component={ViewPostScreen}
-          options={{headerShown: false}}
+          options={{title: 'Bài viết'}}
         />
         <Stack.Screen
           name="EditPost"
@@ -114,7 +114,7 @@ export default function App() {
         <Stack.Screen
           name="ViewTag"
           component={ViewTagScreen}
-          options={{headerShown: false}}
+          options={{title: 'Xem tag'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

@@ -1,22 +1,19 @@
 import React, {Component} from 'react';
 import {ScrollView} from 'react-native-gesture-handler';
 import {View, RefreshControl, StyleSheet} from 'react-native';
-import {Card, Chip, withTheme, Title} from 'react-native-paper';
+import {withTheme} from 'react-native-paper';
 
 import ListPost from './components/ListPost';
 //import UserController from '../controllers/UserController';
 
-class HomeScreen extends Component {
+class ViewTagScreen extends Component {
   state = {refresh: false};
   render() {
+    this.props.navigation.setOptions({
+      title: 'Xem tag: ' + this.props.route.params.tag,
+    });
     return (
       <View style={styles.full}>
-        <Card elevation={10} style={styles.top}>
-          <View style={styles.tags}>
-            <Title>Bài viết gắn Tag: </Title>
-            <Chip icon="tag">{this.props.route.params.tag}</Chip>
-          </View>
-        </Card>
         <ScrollView
           style={styles.full}
           refreshControl={
@@ -47,7 +44,7 @@ class HomeScreen extends Component {
   };
 }
 
-export default withTheme(HomeScreen);
+export default withTheme(ViewTagScreen);
 
 const styles = StyleSheet.create({
   full: {

@@ -72,8 +72,8 @@ server.post('/post/write', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
 		cover = await sharp(req.file.buffer)
-			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
-			.jpeg({ quality: 80, force: true }).toBuffer();
+			.resize({ width: 1280, height: 720, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+			.jpeg({ quality: 50, force: true }).toBuffer();
 	}
 	const result = await PostData.write(req.body.data, cover);
 	res.json(result);
@@ -83,8 +83,8 @@ server.post('/post/edit', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
 		cover = await sharp(req.file.buffer)
-			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
-			.jpeg({ quality: 80, force: true }).toBuffer();
+			.resize({ width: 1280, height: 720, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+			.jpeg({ quality: 50, force: true }).toBuffer();
 	}
 	const result = await PostData.edit(req.body.data, cover);
 	res.json(result);

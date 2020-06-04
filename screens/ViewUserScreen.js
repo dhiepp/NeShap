@@ -17,7 +17,7 @@ import {ScrollView} from 'react-native-gesture-handler';
 import UserController from '../controllers/UserController';
 import ListPost from './components/ListPost';
 
-export default class EditUserScreen extends Component {
+export default class ViewUserScreen extends Component {
   state = {
     loading: true,
     valid: true,
