@@ -53,7 +53,7 @@ server.post('/user/delete', async (req, res) => {
 server.post('/user/edit', upload.single('avatar'), async (req, res) => {
 	let avatar = null;
 	if (req.file !== undefined) {
-		avatar = await sharp(req.file)
+		avatar = await sharp(req.file.buffer)
 			.resize({ width: 256, fit: 'cover', position: 'center', withoutEnlargement: true })
 			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
@@ -71,7 +71,7 @@ server.post('/user/unfollow', async (req, res) => {
 server.post('/post/write', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
-		cover = await sharp(req.file)
+		cover = await sharp(req.file.buffer)
 			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
 			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
@@ -82,7 +82,7 @@ server.post('/post/write', upload.single('cover'), async (req, res) => {
 server.post('/post/edit', upload.single('cover'), async (req, res) => {
 	let cover = null;
 	if (req.file !== undefined) {
-		cover = await sharp(req.file)
+		cover = await sharp(req.file.buffer)
 			.resize({ width: 1024, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
 			.jpeg({ quality: 80, force: true }).toBuffer();
 	}
