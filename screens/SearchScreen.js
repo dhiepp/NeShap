@@ -35,6 +35,7 @@ class SearchScreen extends Component {
             iconColor={this.props.theme.colors.primary}
             onChangeText={text => this._handleSearchInput(text)}
             onIconPress={this._handleSearch}
+            onSubmitEditing={this._handleSearch}
           />
         </Card>
         <ScrollView
@@ -97,7 +98,7 @@ class SearchScreen extends Component {
   };
   _handleSearch = async () => {
     Keyboard.dismiss();
-    const keyword = this.state.keyword;
+    const keyword = this.state.keyword.toLowerCase();
     let tag = false;
     let user = false;
     if (keyword.length < 3) {
