@@ -19,6 +19,7 @@ export default class LoginScreen extends Component {
         <TextInput
           label="Tên tài khoản"
           mode="outlined"
+          autoCapitalize="none"
           maxLength={20}
           style={styles.child}
           onChangeText={text => this.setState({username: text})}

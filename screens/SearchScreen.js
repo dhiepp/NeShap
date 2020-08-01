@@ -32,6 +32,7 @@ class SearchScreen extends Component {
           <Searchbar
             placeholder="Nhập từ khóa..."
             value={this.state.keyword}
+            autoCapitalize="none"
             iconColor={this.props.theme.colors.primary}
             onChangeText={text => this._handleSearchInput(text)}
             onIconPress={this._handleSearch}
