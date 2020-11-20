@@ -1,4 +1,5 @@
 const { ObjectID } = require('mongodb');
+const { pool } = require('./Connection');
 const Connection = require('./Connection');
 
 module.exports = class UserData {
@@ -22,19 +23,10 @@ module.exports = class UserData {
 			return null;
 		}
 	}
-	static async checkExist(query) {
-		if (await this.get(query, { _id: 1 })) return true;
-		return false;
-	}
-	static async checkExistByID(userid) {
-		try {
-			if (await this.get({ _id: new ObjectID(userid) }, { _id: 1 })) return true;
-			return false;
-		}
-		catch (exception) {
-			console.log(exception);
-			return false;
-		}
+	static async checkExist(username) {
+		const [results] = await pool.query('SELECT * FROM user WHERE username = ?', [username]);
+		if (results.length == 0) return false;
+		return true;
 	}
 	static async checkPerm(userid, checkid) {
 		const user = await this.getByID(userid);
@@ -69,34 +61,29 @@ module.exports = class UserData {
 		}
 	}
 
-	static async register(query) {
+	static async register(username, password) {
 		try {
-			const username = query.username ? query.username.toLowerCase() : null;
-			const password = query.password;
 			if (!username || !password) {
 				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
 			}
 			if (!username.match(/^[0-9a-zA-Z]{3,20}$/)) {
 				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
 			}
-			if (await this.checkExist({ username: username })) {
+			if (await this.checkExist(username)) {
 				return { status: 'fail', message: 'Tên tài khoản đã tồn tại!' };
 			}
 
-			const user = { username: username, password: password, role: 0 };
-			const userCollection = await Connection.getCollection('user');
-			const result = await userCollection.insertOne(user);
-			return { status: 'success', userid: result.insertedId, role: 0 };
+			const [result] = await pool.query('INSERT INTO user (username, password, role) VALUES (?, ?, ?)', [username, password, 0]);
+			if (result.affectedRows == 0) throw 'No row changed!';
+			return { status: 'success', userid: result.insertId, role: 0 };
 		}
 		catch (exception) {
 			console.log(exception);
 			return { status: 'fail', message: 'Không thể tạo tài khoản!' };
 		}
 	}
-	static async login(query) {
+	static async login(username, password) {
 		try {
-			const username = query.username ? query.username.toLowerCase() : null;
-			const password = query.password;
 			if (!username || !password) {
 				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
 			}
@@ -104,11 +91,11 @@ module.exports = class UserData {
 				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
 			}
 
-			const result = await this.get({ username: username, password: password });
-			if (!result) {
+			const [results] = await pool.query('SELECT id, role FROM user WHERE username = ? AND password = ?', [username, password]);
+			if (results.length == 0) {
 				return { status: 'fail', message: 'Sai tên đăng nhập hoặc mật khẩu!' };
 			}
-			return { status: 'success', userid: result._id, role: result.role };
+			return { status: 'success', userid: results[0].id, role: results[0].role };
 		}
 		catch (exception) {
 			console.log(exception);

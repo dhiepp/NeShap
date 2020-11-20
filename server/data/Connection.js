@@ -1,22 +1,13 @@
-const MongoClient = require('mongodb').MongoClient;
+const mysql2 = require('mysql2/promise');
 
-// Connection URL and database name
-// const url = 'mongodb://localhost:27017';
-// Heroku config var
-const url = process.env.DATABASE_URL || 'mongodb://localhost:27017';
-const dbName = 'neshap';
-let client;
-
-// Use connect method to connect to the server
-async function connect() {
-	client = await MongoClient.connect(url, { useUnifiedTopology: true });
-}
+const pool = mysql2.createPool({
+	connectionLimit: 10,
+	host: 'localhost',
+	user: 'root',
+	password: 'admin',
+	database: 'neshap',
+});
 
 module.exports = {
-	async getCollection(name) {
-		if (client === undefined) {
-			await connect();
-		}
-		return client.db(dbName).collection(name);
-	},
+	pool: pool,
 };
