@@ -1,34 +1,28 @@
-const { ObjectID } = require('mongodb');
-const { pool } = require('./Connection');
-const Connection = require('./Connection');
+const Neo4j = require('./Neo4j');
 
-module.exports = class UserData {
-	static async get(query, projection) {
-		try {
-			const userCollection = await Connection.getCollection('user');
-			const result = await userCollection.findOne(query, { projection: projection });
-			return result;
-		}
-		catch (exception) {
-			console.log(exception);
-			return null;
-		}
+exports = class UserData {
+	static async get(user_id) {
+		const result = await Neo4j.run('MATCH (u:User {user_id: $idParam}) RETURN u LIMIT 1', { idParam: user_id });
+		session.close();
+
+		if (result.records.length == 0) return null;
+		return result.records[0];
 	}
-	static async getByID(userid, projection) {
-		try {
-			return await this.get({ _id: new ObjectID(userid) }, projection);
-		}
-		catch (exception) {
-			console.log(exception);
-			return null;
-		}
+
+	static async getID(name) {
+		const session = driver.session();
+		const result = await session.run('MATCH (u:User {name: $nameParam}) RETURN u.user_id LIMIT 1', { nameParam: name });
+		session.close();
+
+		if (result.records.length == 0) return null;
+		return result.records[0].get('u.user_id');
 	}
-	static async checkExist(username) {
-		const [results] = await pool.query('SELECT * FROM user WHERE username = ?', [username]);
-		if (results.length == 0) return false;
-		return true;
+
+	static async verify(session_id) {
+
 	}
-	static async checkPerm(userid, checkid) {
+
+	static async perm(userid, checkid) {
 		const user = await this.getByID(userid);
 		const check = await this.checkExistByID(userid);
 		// Invalid user
@@ -40,6 +34,76 @@ module.exports = class UserData {
 		// Normal user
 		return 1;
 	}
+
+	static async rejoin(user_id, session_id) {
+		try {
+			if (!user_id || !session_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+			}
+
+			const loginSession = new LoginSession(session_id);
+			if (user_id === await loginSession.verify()) {
+				return { status: true };
+			}
+			return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: false, message: 'Không thể xác thực phiên đăng nhập!' };
+		}
+	}
+
+	static async register(name, password) {
+		try {
+			if (!name || !password) {
+				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
+			}
+			if (!name.match(/^[0-9a-zA-Z_]{3,20}$/)) {
+				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
+			}
+			if (await this.getID(name)) {
+				return { status: 'fail', message: 'Tên tài khoản đã tồn tại!' };
+			}
+
+			const session = driver.session();
+			const result = await session.run(`MERGE (u:User {user_id:randomUUID(), name:$nameParam, password: $passwordParam, role: 0})
+				-[:HAS_SESSION]->(s:Session {session_id:randomUUID(), time: datetime()}) RETURN u.user_id, s.session_id`,
+			{ nameParam: name, passwordParam: password });
+			const record = result.records[0];
+			if (!record) throw 'No row changed!';
+			return { status: 'success', user_id: record.get('u.user_id'), session_id: record.get('s.session_id') };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: 'fail', message: 'Không thể tạo tài khoản!' };
+		}
+	}
+
+	static async login(name, password) {
+		try {
+			if (!name || !password) {
+				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
+			}
+			if (!name.match(/^[0-9a-zA-Z]{3,20}$/)) {
+				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
+			}
+
+			const session = driver.session();
+			const result = await session.run(`MATCH (u:User {name:$nameParam, password: $passwordParam})
+				CREATE (u)-[:HAS_SESSION]->(s:Session {session_id: randomUUID(), time: datetime()}) RETURN u.user_id, s.session_id`,
+			{ nameParam: name, passwordParam: password });
+			const record = result.records[0];
+			if (!record) {
+				return { status: 'fail', message: 'Sai tên đăng nhập hoặc mật khẩu!' };
+			}
+			return { status: 'success', user_id: record.get('u.user_id'), session_id: record.get('s.session_id') };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: 'fail', message: 'Không thể đăng nhập!' };
+		}
+	}
+
 	static async list(query) {
 		try {
 			const adminid = query.adminid;
@@ -51,7 +115,7 @@ module.exports = class UserData {
 				return null;
 			}
 			const cursor = await userCollection.find({},
-				{ projection: { _id: true }, sort: { username: 1 }, skip: 10 * (page - 1), limit: 10 });
+				{ projection: { _id: true }, sort: { name: 1 }, skip: 10 * (page - 1), limit: 10 });
 			const result = cursor.toArray();
 			return result;
 		}
@@ -61,68 +125,28 @@ module.exports = class UserData {
 		}
 	}
 
-	static async register(username, password) {
-		try {
-			if (!username || !password) {
-				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
-			}
-			if (!username.match(/^[0-9a-zA-Z]{3,20}$/)) {
-				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
-			}
-			if (await this.checkExist(username)) {
-				return { status: 'fail', message: 'Tên tài khoản đã tồn tại!' };
-			}
 
-			const [result] = await pool.query('INSERT INTO user (username, password, role) VALUES (?, ?, ?)', [username, password, 0]);
-			if (result.affectedRows == 0) throw 'No row changed!';
-			return { status: 'success', userid: result.insertId, role: 0 };
-		}
-		catch (exception) {
-			console.log(exception);
-			return { status: 'fail', message: 'Không thể tạo tài khoản!' };
-		}
-	}
-	static async login(username, password) {
-		try {
-			if (!username || !password) {
-				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
-			}
-			if (!username.match(/^[0-9a-zA-Z]{3,20}$/)) {
-				return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
-			}
-
-			const [results] = await pool.query('SELECT id, role FROM user WHERE username = ? AND password = ?', [username, password]);
-			if (results.length == 0) {
-				return { status: 'fail', message: 'Sai tên đăng nhập hoặc mật khẩu!' };
-			}
-			return { status: 'success', userid: results[0].id, role: results[0].role };
-		}
-		catch (exception) {
-			console.log(exception);
-			return { status: 'fail', message: 'Không thể đăng nhập!' };
-		}
-	}
 	static async edit(query, avatar) {
 		try {
-			const userid = query.userid;
-			const username = query.username ? query.username.toLowerCase() : null;
+			const session_id = query.session_id;
+			const name = query.name ? query.name.toLowerCase() : null;
 			const password = query.password;
-			const set = {};
 
-			if (!await this.checkExistByID(userid)) {
-				return { status: 'fail', message: 'User ID không tồn tại!' };
+			const user_id = verify(session_id);
+			if (!user_id) {
+				return { status: 'fail', message: 'Phiên đăng nhập không hợp lệ!' };
 			}
-			if (!username && !password && !avatar) {
+			if (!name && !password && !avatar) {
 				return { status: 'fail', message: 'Thông tin cá nhân không thay đổi!' };
 			}
-			if (username) {
-				if (!username.match(/^[0-9a-zA-Z]{1,20}$/)) {
+			if (name) {
+				if (!name.match(/^[0-9a-zA-Z]{1,20}$/)) {
 					return { status: 'fail', message: 'Tên đăng nhập không hợp lệ!' };
 				}
-				if (await this.checkExist({ _id: { $not: { $eq: new ObjectID(userid) } }, username: username })) {
+				if (await this.getID(name)) {
 					return { status: 'fail', message: 'Tên tài khoản đã được sử dụng!' };
 				}
-				set.username = username;
+				set.name = name;
 			}
 			if (password) {
 				set.password = password;

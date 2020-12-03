@@ -65,5 +65,5 @@ buck-out/
 /server/images/avatar/
 /server/images/cover/
 
-# IOS
-ios/
+# VS Code
+.vscode/

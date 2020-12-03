@@ -10,11 +10,10 @@
   "author": "dhiep",
   "license": "ISC",
   "dependencies": {
+    "eslint": "^7.14.0",
     "express": "^4.17.1",
-    "mongodb": "^3.6.3",
     "multer": "^1.4.2",
-    "mysql2": "^2.2.5",
-    "nodemon": "^2.0.6",
+    "neo4j-driver": "^4.2.1",
     "sharp": "^0.25.4"
   }
 }

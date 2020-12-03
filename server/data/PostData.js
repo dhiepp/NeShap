@@ -1,7 +1,7 @@
 const { ObjectID } = require('mongodb');
-const Connection = require('./Connection');
+const Connection = require('./Neo4jConnection');
 
-const UserData = require('./UserData');
+const UserData = require('./UserData').default;
 
 module.exports = class PostData {
 	static async getByID(postid, projection) {

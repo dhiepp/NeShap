@@ -4,21 +4,26 @@ const sharp = require('sharp');
 const server = express();
 const port = 6969;
 
-const UserData = require('./data/UserData');
-const PostData = require('./data/PostData');
-const CommentData = require('./data/CommentData');
+const Session = require('./data/SessionData');
+const User = require('./data/UserData');
 
 const upload = multer({ storage: multer.memoryStorage() });
-
 server.use(express.json());
 
+server.post('/user/rejoin', Session.validate(req,r)
+/*
+server.post('/user/rejoin', async (req, res) => {
+	res.json(await UserData.rejoin(req.query.user_id, req.query.session_id));
+});
+
 server.post('/user/login', async (req, res) => {
-	res.json(await UserData.login(req.query));
+	res.json(await UserData.login(req.query.name, req.query.password));
 });
 
 server.post('/user/register', async (req, res) => {
-	res.json(await UserData.register(req.query));
+	res.json(await UserData.register(req.query.name, req.query.password));
 });
+
 
 server.get('/user/get', async (req, res) => {
 	const result = await UserData.getByID(req.query.userid, { password: false, avatar: false });
@@ -55,7 +60,7 @@ server.post('/user/edit', upload.single('avatar'), async (req, res) => {
 	if (req.file !== undefined) {
 		avatar = await sharp(req.file.buffer)
 			.resize({ width: 256, fit: 'cover', position: 'center', withoutEnlargement: true })
-			.jpeg({ quality: 80, force: true }).toBuffer();
+			.jpeg({ quality: 80, force: true });
 	}
 	res.json(await UserData.edit(req.query, avatar));
 });
@@ -139,6 +144,7 @@ server.post('/comment/delete', async (req, res) => {
 	const result = await CommentData.delete(req.query);
 	res.json(result);
 });
+*/
 
 server.listen(process.env.PORT || port, () => {
 	console.log('RESTful API server started on: ' + port);
