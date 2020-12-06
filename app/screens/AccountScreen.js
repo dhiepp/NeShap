@@ -14,22 +14,24 @@ import * as AppData from '../AppData';
 export default class AccountScreen extends Component {
   state = {loading: true, active: true};
   async componentDidMount() {
-    this._navListener = this.props.navigation.addListener('focus', async () => {
-      if (this.state.active) {
-        const userdata = await AppData.getUserData();
-        if (userdata.userid == null) {
+    // this._navListener = this.props.navigation.addListener('focus', async () => {
+    //   if (this.state.active) {
+        
+    //   }
+    // });
+    const userdata = await AppData.getUserData();
+    console.log(userdata);
+        if (userdata.user_id == null) {
           this.setState({isLoggedIn: false});
         } else {
           this.setState({isLoggedIn: true, role: userdata.role});
         }
         this.setState({loading: false});
-      }
-    });
   }
-  componentWillUnmount() {
-    this.setState({active: false});
-    this._navListener;
-  }
+  // componentWillUnmount() {
+  //   this.setState({active: false});
+  //   this._navListener;
+  // }
   render() {
     if (this.route !== undefined) {
       this.setState({isLoggedIn: true, loading: false});

@@ -1,5 +1,6 @@
 import * as AppData from '../AppData';
 import * as Crypto from 'expo-crypto';
+import { CommonActions } from '@react-navigation/native';
 
 export default class UserController {
   static async view(navigation, userid) {
@@ -9,24 +10,34 @@ export default class UserController {
   static async login(screen) {
     try {
       screen.setState({message: false});
-      const username = screen.state.username;
+      const name = screen.state.name;
       const password = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         screen.state.password,
       );
-
+      
       const response = await fetch(
         `${
           AppData.server
-        }/user/login?username=${username}&password=${password}`,
+        }/user/login?name=${name}&password=${password}`,
         {method: 'post'},
       );
 
       const json = await response.json();
       console.log(json);
-      if (json.status === 'success') {
-        AppData.setUserData({userid: json.userid, role: json.role});
-        screen.props.navigation.navigate('HomeTabs', {screen: 'Account'});
+      if (json.status) {
+        AppData.setUserData({user_id: json.user_id, session_id: json.session_id, role: json.role});
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'HomeTabs',
+                params: {screen: 'Account'},
+              },
+            ],
+          })
+        );
       } else {
         screen.setState({message: json.message});
       }
@@ -38,7 +49,7 @@ export default class UserController {
   static async register(screen) {
     try {
       screen.setState({message: false});
-      const username = screen.state.username;
+      const name = screen.state.name;
       const password = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         screen.state.password,
@@ -47,14 +58,24 @@ export default class UserController {
       const response = await fetch(
         `${
           AppData.server
-        }/user/register?username=${username}&password=${password}`,
+        }/user/register?name=${name}&password=${password}`,
         {method: 'post'},
       );
       const json = await response.json();
       console.log(json);
-      if (json.status === 'success') {
-        AppData.setUserData({userid: json.userid, role: json.role});
-        screen.props.navigation.navigate('HomeTabs', {screen: 'Account'});
+      if (json.status) {
+        AppData.setUserData({user_id: json.user_id, session_id: json.session_id, role: json.role});
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'HomeTabs',
+                params: {screen: 'Account'},
+              },
+            ],
+          })
+        );
       } else {
         screen.setState({message: json.message});
       }

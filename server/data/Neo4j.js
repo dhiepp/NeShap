@@ -5,4 +5,12 @@ const driver = neo4j.driver(
 	neo4j.auth.basic('neo4j', 'neshap-graph'),
 );
 
-exports = () => driver.session();
+module.exports = {
+	neo4j: neo4j,
+	run: async (query, params) => {
+		const session = driver.session();
+		const result = await session.run(query, params);
+		await session.close();
+		return result;
+	},
+};

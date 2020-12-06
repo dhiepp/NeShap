@@ -15,9 +15,10 @@ export async function checkUserData() {
 
 export async function getUserData() {
   try {
-    const userid = await AsyncStorage.getItem('userid');
+    const user_id = await AsyncStorage.getItem('user_id');
+    const session_id = await AsyncStorage.getItem('session_id');
     const role = await AsyncStorage.getItem('role');
-    return {userid: userid, role: role};
+    return {user_id: user_id, session_id: session_id, role: role};
   } catch (error) {
     console.log(error);
     return null;
@@ -26,8 +27,8 @@ export async function getUserData() {
 
 export async function setUserData(userdata) {
   try {
-    console.log(userdata);
-    await AsyncStorage.setItem('userid', userdata.userid);
+    await AsyncStorage.setItem('user_id', userdata.user_id);
+    await AsyncStorage.setItem('session_id', userdata.session_id);
     await AsyncStorage.setItem('role', String(userdata.role));
     return true;
   } catch (error) {
@@ -38,7 +39,8 @@ export async function setUserData(userdata) {
 
 export async function removeUserData() {
   try {
-    await AsyncStorage.removeItem('userid');
+    await AsyncStorage.removeItem('user_id');
+    await AsyncStorage.removeItem('session_id');
     await AsyncStorage.removeItem('role');
     return true;
   } catch (error) {
@@ -48,6 +50,5 @@ export async function removeUserData() {
 }
 
 const server = 'http://10.0.2.2:6969';
-//const server = 'http://neshap.herokuapp.com';
 
 export {server};

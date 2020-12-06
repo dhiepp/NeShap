@@ -5,7 +5,7 @@ import {TextInput, Button, HelperText, Headline} from 'react-native-paper';
 import UserController from '../controllers/UserController';
 
 export default class LoginScreen extends Component {
-  state = {username: '', password: '', message: false};
+  state = {name: '', password: '', message: false};
   render() {
     return (
       <View style={styles.main}>
@@ -22,7 +22,7 @@ export default class LoginScreen extends Component {
           autoCapitalize="none"
           maxLength={20}
           style={styles.child}
-          onChangeText={text => this.setState({username: text})}
+          onChangeText={text => this.setState({name: text})}
         />
         <TextInput
           label="Mật khẩu"
