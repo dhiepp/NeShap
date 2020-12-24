@@ -6,7 +6,7 @@ const driver = neo4j.driver(
 );
 
 module.exports = {
-	neo4j: neo4j,
+	int: neo4j.int,
 	run: async (query, params) => {
 		const session = driver.session();
 		const result = await session.run(query, params);

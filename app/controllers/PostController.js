@@ -11,9 +11,8 @@ export default class PostController {
     try {
       screen.setState({message: false});
       const request = {};
-      const userid = (await AppData.getUserData()).userid;
-      request.authorid = userid;
-      request.title = screen.state.title;
+      const session_id = (await AppData.getUserData()).session_id;
+      request.session_id = session_id;
       request.content = screen.state.content;
       request.tags = Array.from(screen.state.tags);
       const cover = screen.state.cover;
@@ -35,13 +34,13 @@ export default class PostController {
       const response = await fetch(`${AppData.server}/post/write`, init);
       const json = await response.json();
       console.log(json);
-      if (json.status === 'success') {
+      if (json.status) {
         screen.props.navigation.dispatch(
           CommonActions.reset({
             index: 1,
             routes: [
               {name: 'HomeTabs'},
-              {name: 'ViewPost', params: {postid: json.postid}},
+              {name: 'ViewPost', params: {post_id: json.post_id}},
             ],
           }),
         );
@@ -116,16 +115,15 @@ export default class PostController {
     }
   }
 
-  static async get(postid) {
+  static async get(post_id) {
     try {
       const response = await fetch(
-        `${AppData.server}/post/get?postid=${postid}`,
+        `${AppData.server}/post/get?post_id=${post_id}`,
         {method: 'get'},
       );
       const json = await response.json();
       // eslint-disable-next-line prettier/prettier
-      json.cover = `${AppData.server}/post/cover?postid=${postid}&t=${Date.now()}`;
-      console.log(json);
+      json.coverUrl = `${AppData.server}/post/cover?post_id=${post_id}&t=${Date.now()}`;
       return json;
     } catch (exception) {
       console.log(exception);

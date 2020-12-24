@@ -1,17 +1,14 @@
 const express = require('express');
-const multer = require('multer');
-const sharp = require('sharp');
 const server = express();
 const port = 6969;
 
-const SessionController = require('./controller/SessionController');
-const UserController = require('./controller/UserController');
+const UserRouter = require('./router/UserRouter');
+const PostRouter = require('./router/PostRouter');
 
-const upload = multer({ storage: multer.memoryStorage() });
 server.use(express.json());
 
-server.use('/session', (new SessionController()).router);
-server.use('/user', (new UserController()).router);
+server.use('/user', UserRouter);
+server.use('/post', PostRouter);
 
 /*
 server.post('/user/rejoin', async (req, res) => {

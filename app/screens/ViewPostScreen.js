@@ -53,7 +53,7 @@ export default class ViewPostScreen extends Component {
               style={styles.author_box}
               onPress={this._handleViewAuthor}>
               <Card.Title
-                title={this.state.author.username}
+                title={this.state.author.name}
                 subtitle={this.state.time}
                 left={props => (
                   <Avatar.Image
@@ -77,10 +77,10 @@ export default class ViewPostScreen extends Component {
               />
             </TouchableRipple>
 
-            {this.state.post.hasCover && (
+            {this.state.post.cover && (
               <Card.Cover
                 style={styles.cover}
-                source={{uri: this.state.post.cover}}
+                source={{uri: this.state.post.coverUrl}}
               />
             )}
             <Card.Content>
@@ -137,27 +137,30 @@ export default class ViewPostScreen extends Component {
   }
 
   async loadPost() {
-    const post = await PostController.get(this.props.route.params.postid);
+    const post = await PostController.get(this.props.route.params.post_id);
     if (!post) {
       this.setState({loading: false, valid: false});
       return;
     }
-    const author = await UserController.get(post.authorid);
-    const perm = await UserController.checkPerm(post.authorid);
+    const author = post.author;
+    //const perm = await UserController.checkPerm(post.authorid);
     const time = moment(post.time).fromNow();
-    const likes = post.likes ? post.likes : [];
-    const dislikes = post.dislikes ? post.dislikes : [];
+    //const likes = post.likes ? post.likes : [];
+    //const dislikes = post.dislikes ? post.dislikes : [];
     this.setState({
       loading: false,
       refresh: false,
       post: post,
       author: author,
-      perm: perm,
+      // perm: perm,
+      perm: 2,
       time: time,
-      likes: likes,
-      dislikes: dislikes,
+      // likes: likes,
+      // dislikes: dislikes,
+      likes: [],
+      dislikes: [],
     });
-    this.updateRating();
+    // this.updateRating();
   }
   updateRating() {
     const liked = this.state.likes.includes(this.state.perm.userid);
