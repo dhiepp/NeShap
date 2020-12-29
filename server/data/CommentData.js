@@ -3,9 +3,23 @@ const Neo4j = require('./Neo4j');
 const UserData = require('./UserData');
 
 module.exports = class CommentData {
+	static async check(user_id, comment_id) {
+		if (!user_id || !comment_id) return false;
+
+		const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})
+			OPTIONAL MATCH (u)-[r:WRITES_COMMENT]->(c:Comment {comment_id: $commentParam}) 
+			RETURN u.role, r LIMIT 1`, { userParam: user_id, commentParam: comment_id });
+		const record = result.records[0];
+		if (record.get('u.role') > 0) return true;
+		if (record.get('r')) return true;
+		return false;
+	}
+
 	static async list(query) {
 		try {
 			const post_id = query.post_id;
+
+			if (!post_id) return [];
 
 			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam})-[:HAS_COMMENT]-(c:Comment)
 				OPTIONAL MATCH (a:User)-[:WRITES_COMMENT]->(c) RETURN c, a ORDER BY c.time DESC`,
@@ -27,23 +41,11 @@ module.exports = class CommentData {
 		}
 	}
 
-	static async check(user_id, comment_id) {
-		if (!user_id || !comment_id) return false;
-
-		const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})
-			OPTIONAL MATCH (u)-[r:WRITES_COMMENT]->(c:Comment {comment_id: $commentParam}) 
-			RETURN u.role, r LIMIT 1`, { userParam: user_id, commentParam: comment_id });
-		const record = result.records[0];
-		if (record.get('u.role') > 0) return true;
-		if (record.get('r')) return true;
-		return false;
-	}
-
-	static async write(query) {
+	static async write(data) {
 		try {
-			const session_id = query.session_id;
-			const post_id = query.post_id;
-			const content = query.content;
+			const session_id = data.session_id;
+			const post_id = data.post_id ? data.post_id : null;
+			const content = data.content;
 
 			const user_id = await UserData.verify(session_id);
 			if (!user_id) {
@@ -55,7 +57,7 @@ module.exports = class CommentData {
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (p:Post {post_id: $postParam})
 				CREATE (u)-[:WRITES_COMMENT]->(c:Comment {comment_id: randomUUID(), content: $contentParam, time: datetime()})
-				<-[:HAS_COMMENT]-(p) RETURN c.comment_id`,
+				<-[:HAS_COMMENT]-(p) SET p.comments = p.comments + 1 RETURN c.comment_id`,
 			{ userParam: user_id, postParam: post_id, contentParam: content });
 			const comment_id = result.records[0]?.get('c.comment_id');
 			if (!comment_id) throw 'Comment Write failed';
@@ -78,14 +80,12 @@ module.exports = class CommentData {
 				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
 			}
 			if (!await this.check(user_id, comment_id)) {
-				return { status: false, message: 'Không có quyền xóa bình luận!' };
+				return { status: false, message: 'Không có quyền xóa hoặc bình luận không tồn tại!' };
 			}
 
-			const result = await Neo4j.run('MATCH (c:Comment {comment_id: $commentParam}) DETACH DELETE c',
-				{ commentParam: comment_id });
-			if (result.summary.counters.updates().deletedNodes == 0) {
-				return { status: false, message: 'Bình luận không bị xóa!' };
-			}
+			const result = await Neo4j.run(`MATCH (p:Post)-[:HAS_COMMENT]->(c:Comment {comment_id: $commentParam}) DETACH DELETE c
+				SET p.comments = p.comments - 1`, { commentParam: comment_id });
+			if (result.summary.counters.updates().deletedNodes == 0) throw 'Comment Delete Failed!';
 
 			return { status: true };
 		}

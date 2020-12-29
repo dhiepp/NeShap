@@ -2,11 +2,13 @@ import AsyncStorage from '@react-native-community/async-storage';
 
 export async function checkUserData() {
   try {
-    const value = await AsyncStorage.getItem('userid');
-    if (value != null) {
-      return true;
+    const user_id = await AsyncStorage.getItem('user_id');
+    const session_id = await AsyncStorage.getItem('session_id');
+    const role = await AsyncStorage.getItem('role');
+    if (!user_id || !session_id || !role) {
+      return false;
     }
-    return false;
+    return true;
   } catch (error) {
     console.log(error);
     return false;

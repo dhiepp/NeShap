@@ -1,11 +1,12 @@
 const Neo4j = require('./Neo4j');
 const sharp = require('sharp');
-const fs = require('fs/promises');
+const fs = require('fs');
 
 const UserData = require('./UserData');
 
 module.exports = class PostData {
 	static async getByPostID(post_id) {
+		if (!post_id) return null;
 		const result = await Neo4j.run('MATCH (u:User)-[:WRITES_POST]->(p:Post {post_id: $postParam}) RETURN p LIMIT 1',
 			{ postParam: post_id });
 		return result.records[0]?.get('p')?.properties;
@@ -23,12 +24,13 @@ module.exports = class PostData {
 		return false;
 	}
 
-	static async write(data, cover) {
+	static async write(data_string, cover) {
 		try {
+			const data = JSON.parse(data_string);
 			const session_id = data.session_id;
 			const title = data.title;
 			const content = data.content;
-			const tags = data.tags?.split(',');
+			const tags = data.tags;
 
 			const user_id = await UserData.verify(session_id);
 			if (!user_id) {
@@ -45,11 +47,11 @@ module.exports = class PostData {
 				}
 			}
 
-			const hasCover = cover ? true : false;
+			const has_cover = cover ? true : false;
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) CREATE (u)-[:WRITES_POST]->(p:Post 
 				{post_id: randomUUID(), title: $titleParam, content: $contentParam, time: datetime(),
-				hasCover: $coverParam, tags: $tagsParam}) RETURN p.post_id`,
-			{ userParam: user_id, titleParam: title, contentParam: content, coverParam: hasCover, tagsParam: tags });
+				has_cover: $coverParam, tags: $tagsParam, likes: 0, comments: 0}) RETURN p.post_id`,
+			{ userParam: user_id, titleParam: title, contentParam: content, coverParam: has_cover, tagsParam: tags });
 			const post_id = result.records[0]?.get('p.post_id');
 			if (!post_id) throw 'Post Write failed';
 
@@ -67,13 +69,14 @@ module.exports = class PostData {
 		}
 	}
 
-	static async edit(data, cover) {
+	static async edit(data_string, cover) {
 		try {
+			const data = JSON.parse(data_string);
 			const session_id = data.session_id;
 			const post_id = data.post_id;
 			const title = data.title;
 			const content = data.content;
-			const tags = data.tags?.split(',');
+			const tags = data.tags;
 
 			const user_id = await UserData.verify(session_id);
 			if (!user_id) {
@@ -93,10 +96,10 @@ module.exports = class PostData {
 				}
 			}
 
-			const hasCover = cover ? true : false;
+			const edit_cover = cover ? ' p.has_cover = true,' : '';
 			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam}) SET p.title = $titleParam, 
-				p.content = $contentParam, p.hasCover = $coverParam, p.tags = $tagsParam RETURN p.post_id`,
-			{ postParam: post_id, titleParam: title, contentParam: content, coverParam: hasCover, tagsParam: tags });
+				p.content = $contentParam,${edit_cover} p.tags = $tagsParam RETURN p.post_id`,
+			{ postParam: post_id, titleParam: title, contentParam: content, tagsParam: tags });
 			if (result.summary.counters.updates().propertiesSet == 0) throw 'Post Edit failed';
 
 			if (cover) {
@@ -133,7 +136,7 @@ module.exports = class PostData {
 				return { status: false, message: 'Bài viết không bị xóa!' };
 			}
 
-			await fs.unlink(`./images/cover/${post_id}.jpg`);
+			fs.unlink(`./images/cover/${post_id}.jpg`, () => null);
 			return { status: true };
 		}
 		catch (exception) {
@@ -154,19 +157,18 @@ module.exports = class PostData {
 			let records;
 			switch (mode) {
 			case 'new': {
-				const result = await Neo4j.run(`MATCH (p:Post) 
-					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (l:User)-[:LIKES]->(p) 
-					RETURN p, a, count(l) as likes ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				const result = await Neo4j.run(`MATCH (p:Post) OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
 				{ skip: skip, limit: limit });
 				records = result.records;
 				break;
 			}
 			case 'hot': {
 				const time = new Date();
-				time.setDate(time.getDate() - 20);
-				const result = await Neo4j.run(`MATCH (p:Post) WHERE p.time > datetime($timeParam)
-					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (l:User)-[:LIKES]->(p) 
-					RETURN p, a, count(l) as likes ORDER BY likes DESC SKIP $skip LIMIT $limit`,
+				time.setDate(time.getDate() - 30);
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE p.time > datetime($timeParam) 
+					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.likes + p.comments DESC SKIP $skip LIMIT $limit`,
 				{ timeParam: time.toISOString(), skip: skip, limit: limit });
 				records = result.records;
 				break;
@@ -174,26 +176,24 @@ module.exports = class PostData {
 			case 'friend': {
 				if (!user_id) return [];
 				const result = await Neo4j.run(`MATCH (:User {user_id: $userParam})-[:FRIENDS]->(a:User)-[:WRITES_POST]->(p:Post) 
-					OPTIONAL MATCH (p)<-[:LIKES]-(l:User) 
-					RETURN p, a, count(l) as likes ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
 				{ userParam: user_id, skip: skip, limit: limit });
 				records = result.records;
 				break;
 			}
 			case 'search': {
 				if (key.length < 3) return[];
-				const result = await Neo4j.run(`MATCH (p:Post) WHERE toLower(p.title) CONTAINS $keyParam OR toLower(p.content) CONTAINS $keyParam 
-					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (l:User)-[:LIKES]->(p) 
-					RETURN p, a, count(l) as likes ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE toLower(p.title) CONTAINS $keyParam 
+					OR toLower(p.content) CONTAINS $keyParam OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
 				{ keyParam: key, skip: skip, limit: limit });
 				records = result.records;
 				break;
 			}
 			case 'tag': {
 				if (!key.match(/^[0-9a-zA-Z]{3,20}$/)) return [];
-				const result = await Neo4j.run(`MATCH (p:Post) WHERE $keyParam IN p.tags 
-					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (l:User)-[:LIKES]->(p) 
-					RETURN p, a, count(l) as likes ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE $keyParam IN p.tags OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
 				{ keyParam: key, skip: skip, limit: limit });
 				records = result.records;
 				break;
@@ -201,8 +201,7 @@ module.exports = class PostData {
 			case 'profile': {
 				if (!user_id) return [];
 				const result = await Neo4j.run(`MATCH (a:User {user_id: $userParam})-[:WRITES_POST]->(p:Post) 
-					OPTIONAL MATCH (p)<-[:LIKES]-(l:User) 
-					RETURN p, a, count(l) as likes ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
 				{ userParam: user_id, skip: skip, limit: limit });
 				records = result.records;
 				break;
@@ -213,8 +212,9 @@ module.exports = class PostData {
 			const posts = records.map(record => {
 				const post = record.get('p')?.properties;
 				const author = record.get('a')?.properties;
-				post.author = author ? { user_id : author.user_id, name: author.name } : null;
-				post.likes = Neo4j.int(record.get('likes')).toInt();
+				post.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
+				post.likes = Neo4j.int(post.likes).toInt();
+				post.comments = Neo4j.int(post.comments).toInt();
 				post.time = post.time.toString();
 				return post;
 			});
@@ -228,20 +228,21 @@ module.exports = class PostData {
 
 	static async detail(query) {
 		try {
-			const post_id = query.post_id;
+			const post_id = query.post_id ? query.post_id : null;
 			const viewer_id = query.viewer_id ? query.viewer_id : null;
 
 			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam}) 
-				OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (l:User)-[:LIKES]->(p) 
-				OPTIONAL MATCH (v:User {user_id: $viewerParam})-[:LIKES]->(p) RETURN p, a, count(l) as likes, v`,
+				OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (v:User {user_id: $viewerParam})-[:LIKES]->(p) 
+				RETURN p, a, v`,
 			{ postParam: post_id, viewerParam: viewer_id });
 			const record = result.records[0];
 			if (!record) throw 'Post not found';
 
 			const post = record.get('p')?.properties;
 			const author = record.get('a')?.properties;
-			post.author = author ? { user_id : author.user_id, name: author.name } : null;
-			post.likes = Neo4j.int(record.get('likes')).toInt();
+			post.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
+			post.likes = Neo4j.int(post.likes).toInt();
+			post.comments = Neo4j.int(post.comments).toInt();
 			post.time = post.time.toString();
 			post.liked = record.get('v') ? true : false;
 			return post;
@@ -255,7 +256,7 @@ module.exports = class PostData {
 	static async like(query) {
 		try {
 			const session_id = query.session_id;
-			const post_id = query.post_id;
+			const post_id = query.post_id ? query.post_id : null;
 
 			const user_id = await UserData.verify(session_id);
 			if (!user_id) {
@@ -263,10 +264,11 @@ module.exports = class PostData {
 			}
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (p:Post {post_id: $postParam}) 
-				MERGE (u)-[r:LIKES]->(p) RETURN r`, { userParam: user_id, postParam: post_id });
+				MERGE (u)-[r:LIKES]->(p) ON CREATE SET p.likes = p.likes + 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'Post like failed!';
 
-			return { status: true };
+			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
+			return { status: true, likes: likes };
 		}
 		catch (exception) {
 			console.log(exception);
@@ -277,7 +279,7 @@ module.exports = class PostData {
 	static async unlike(query) {
 		try {
 			const session_id = query.session_id;
-			const post_id = query.post_id;
+			const post_id = query.post_id ? query.post_id : null;
 
 			const user_id = await UserData.verify(session_id);
 			if (!user_id) {
@@ -285,10 +287,11 @@ module.exports = class PostData {
 			}
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})-[r:LIKES]->(p:Post {post_id: $postParam}) 
-				DELETE r`, { userParam: user_id, postParam: post_id });
+				DELETE r SET p.likes = p.likes - 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
 			if (result.summary.counters.updates().relationshipsDeleted == 0) throw 'Post unlike failed!';
 
-			return { status: true };
+			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
+			return { status: true, likes: likes };
 		}
 		catch (exception) {
 			console.log(exception);

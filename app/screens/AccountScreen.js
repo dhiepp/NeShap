@@ -1,53 +1,29 @@
 import React, {Component} from 'react';
-import {StyleSheet, Image, ImageBackground} from 'react-native';
-import {
-  Colors,
-  Button,
-  Card,
-  ActivityIndicator,
-  Headline,
-} from 'react-native-paper';
+import {StyleSheet, View} from 'react-native';
+import {Colors, Button, Card} from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
 import * as AppData from '../AppData';
 
 export default class AccountScreen extends Component {
-  state = {loading: true, active: true};
+  state = {role: 0};
   async componentDidMount() {
-    const userdata = await AppData.getUserData();
-    console.log(userdata);
-    if (userdata.user_id == null) {
-      this.setState({isLoggedIn: false});
-    } else {
-      this.setState({isLoggedIn: true, role: userdata.role});
-    }
-    this.setState({loading: false});
-  }
-  render() {
-    if (this.route !== undefined) {
-      this.setState({isLoggedIn: true, loading: false});
-    }
-    if (this.state.loading) {
-      return <ActivityIndicator size="large" style={styles.full} />;
-    }
-    if (this.state.isLoggedIn) {
-      return <this.LoggedInView />;
-    } else {
-      return <this.NotLoggedInView />;
-    }
+    const user_data = await AppData.getUserData();
+    this.setState({role: user_data.role, user_id: user_data.user_id});
   }
 
-  LoggedInView = () => {
+  render() {
     return (
-      <ImageBackground
-        source={require('./static/background.png')}
-        style={styles.full}>
-        <Image source={require('./static/logo.png')} style={styles.logo} />
+      <View style={styles.full}>
         <Card style={styles.box}>
           <Button
             icon="account"
             style={styles.child}
-            onPress={() => this.props.navigation.navigate('ViewUser')}>
+            onPress={() =>
+              this.props.navigation.navigate('ViewUser', {
+                user_id: this.state.user_id,
+              })
+            }>
             Xem trang cá nhân
           </Button>
           <Button
@@ -78,31 +54,9 @@ export default class AccountScreen extends Component {
             Đăng xuất
           </Button>
         </Card>
-      </ImageBackground>
+      </View>
     );
-  };
-  NotLoggedInView = () => {
-    return (
-      <ImageBackground
-        source={require('./static/background.png')}
-        style={styles.full}>
-        <Image source={require('./static/logo.png')} style={styles.logo} />
-        <Card style={styles.box}>
-          <Headline style={styles.title}>Bạn chưa đăng nhập!</Headline>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Login')}>
-            Đăng nhập
-          </Button>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Register')}>
-            Đăng ký
-          </Button>
-        </Card>
-      </ImageBackground>
-    );
-  };
+  }
 
   _handleLogout = () => {
     UserController.logout(this);
@@ -115,20 +69,10 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
   },
-  logo: {
-    alignSelf: 'center',
-    width: '80%',
-    height: '20%',
-    resizeMode: 'contain',
-  },
   box: {
     margin: 20,
     padding: 10,
     justifyContent: 'center',
-  },
-  title: {
-    margin: 10,
-    textAlign: 'center',
   },
   child: {
     margin: 5,

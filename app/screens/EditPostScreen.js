@@ -23,17 +23,23 @@ export default class EditPostScreen extends Component {
   state = {
     loading: true,
     message: false,
-    newCover: false,
     delete: false,
-    newTitle: '',
-    newContent: '',
-    newTags: '',
+    new_cover: false,
+    new_title: '',
+    new_content: '',
+    new_tags: '',
   };
   async componentDidMount() {
-    const post = await PostController.get(this.props.route.params.postid);
-    const editTags = new Set();
-    post.tags.forEach(tag => editTags.add(tag));
-    this.setState({loading: false, post: post, editTags: editTags});
+    const post = await PostController.detail(this.props.route.params.post_id);
+    const edit_tags = new Set();
+    post.tags.forEach((tag) => edit_tags.add(tag));
+    this.setState({
+      loading: false,
+      post: post,
+      edit_tags: edit_tags,
+      new_title: post.title,
+      new_content: post.content,
+    });
   }
   render() {
     if (this.state.loading) {
@@ -46,8 +52,8 @@ export default class EditPostScreen extends Component {
             <Title style={styles.title}>Ảnh bìa</Title>
             <Card.Cover
               source={{
-                uri: this.state.newCover
-                  ? this.state.newCover.uri
+                uri: this.state.new_cover
+                  ? this.state.new_cover.uri
                   : this.state.post.cover,
               }}
               style={styles.cover}
@@ -68,7 +74,7 @@ export default class EditPostScreen extends Component {
               maxLength={50}
               defaultValue={this.state.post.title}
               style={styles.child}
-              onChangeText={text => this.setState({newTitle: text})}
+              onChangeText={(text) => this.setState({new_title: text})}
             />
             <TextInput
               label="Nội dung"
@@ -76,10 +82,10 @@ export default class EditPostScreen extends Component {
               multiline={true}
               defaultValue={this.state.post.content}
               style={styles.child}
-              onChangeText={text => this.setState({newContent: text})}
+              onChangeText={(text) => this.setState({new_content: text})}
             />
             <View style={styles.tags}>
-              {Array.from(this.state.editTags).map(tag => (
+              {Array.from(this.state.edit_tags).map((tag) => (
                 <Chip
                   key={tag}
                   style={styles.tagchip}
@@ -94,8 +100,8 @@ export default class EditPostScreen extends Component {
                 label="Tags"
                 mode="outlined"
                 style={styles.inline_input}
-                value={this.state.newTags}
-                onChangeText={text => this.setState({newTags: text})}
+                value={this.state.new_tags}
+                onChangeText={(text) => this.setState({new_tags: text})}
               />
               <Button
                 mode="contained"
@@ -147,32 +153,29 @@ export default class EditPostScreen extends Component {
   }
 
   _handleImagePicker = () => {
-    ImagePicker.showImagePicker(response => {
+    ImagePicker.showImagePicker((response) => {
       if (response.didCancel === undefined) {
-        this.setState({newCover: response});
+        this.setState({new_cover: response});
       }
     });
   };
   _handleTagInput = () => {
-    if (!this.state.newTags) {
+    if (!this.state.new_tags) {
       return;
     }
-    let current_tags = this.state.editTags;
-    const newTags = this.state.newTags
-      .toLowerCase()
-      .trim()
-      .split(/\s+/);
-    newTags.forEach(tag => {
+    let current_tags = this.state.edit_tags;
+    const new_tags = this.state.new_tags.toLowerCase().trim().split(/\s+/);
+    new_tags.forEach((tag) => {
       if (tag.match(/^[0-9a-zA-Z]{3,20}$/)) {
         current_tags.add(tag);
       }
     });
-    this.setState({editTags: current_tags, newTags: ''});
+    this.setState({edit_tags: current_tags, new_tags: ''});
   };
-  _handleTagRemove = tag => {
-    const editTags = this.state.editTags;
-    editTags.delete(tag);
-    this.setState({tags: editTags});
+  _handleTagRemove = (tag) => {
+    const edit_tags = this.state.edit_tags;
+    edit_tags.delete(tag);
+    this.setState({edit_tags: edit_tags});
   };
   _handleSubmit = () => {
     PostController.edit(this);

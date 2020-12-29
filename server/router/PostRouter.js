@@ -2,16 +2,17 @@ const PostData = require('../data/PostData');
 
 const express = require('express');
 const multer = require('multer');
+const fs = require('fs/promises');
 
 const upload = multer({ storage: multer.memoryStorage() });
 const router = express.Router();
 
 router.post('/write', upload.single('cover'), async (req, res) => {
-	res.json(await PostData.write(req.body, req.file?.buffer));
+	res.json(await PostData.write(req.body.data, req.file?.buffer));
 });
 
 router.post('/edit', upload.single('cover'), async (req, res) => {
-	res.json(await PostData.edit(req.body, req.file?.buffer));
+	res.json(await PostData.edit(req.body.data, req.file?.buffer));
 });
 
 router.post('/delete', async (req, res) => {
@@ -28,12 +29,15 @@ router.get('/detail', async (req, res) => {
 
 router.get('/cover', async (req, res) => {
 	const post_id = req.query.post_id;
-	const post = await PostData.getByPostID(post_id);
-	if (post) {
-		res.sendFile(`${post_id}.jpg`, { maxAge: '1h', root: './images/cover/' });
+	try {
+		const post = await PostData.getByPostID(post_id);
+		if (!post) throw 'Post not found';
+
+		await fs.access(`./images/cover/${post_id}.jpg`);
+		res.sendFile(`${post_id}.jpg`, { maxAge: '1h', root: './images/cover' });
 	}
-	else {
-		res.sendStatus(404);
+	catch (error) {
+		res.sendFile('default_cover.jpg', { maxAge: '1h', root: './images' });
 	}
 });
 

@@ -1,17 +1,12 @@
 import React, {Component} from 'react';
-import {ScrollView} from 'react-native-gesture-handler';
-import {View, RefreshControl, StyleSheet} from 'react-native';
-import {withTheme} from 'react-native-paper';
+import {View, RefreshControl, StyleSheet, ScrollView} from 'react-native';
+import {withTheme, Card, Chip} from 'react-native-paper';
 
-import ListPost from './components/ListPost';
-//import UserController from '../controllers/UserController';
+import ListPostComponent from './components/ListPostComponent';
 
 class ViewTagScreen extends Component {
-  state = {refresh: false};
+  state = {refresh: false, tag: this.props.route.params?.tag};
   render() {
-    this.props.navigation.setOptions({
-      title: 'Xem tag: ' + this.props.route.params.tag,
-    });
     return (
       <View style={styles.full}>
         <ScrollView
@@ -22,10 +17,15 @@ class ViewTagScreen extends Component {
               onRefresh={this._handleRefresh}
             />
           }>
-          <ListPost
+          <Card style={styles.box}>
+            <Chip icon="tag" style={styles.tag}>
+              {this.state.tag}
+            </Chip>
+          </Card>
+          <ListPostComponent
             mode="tag"
             page={this.state.page}
-            keyword={this.props.route.params.tag}
+            keyword={this.state.tag}
             navigation={this.props.navigation}
             refresh={this.state.refresh}
             onFinishRefresh={this._finishRefresh}
@@ -53,13 +53,12 @@ const styles = StyleSheet.create({
   top: {
     padding: 10,
   },
-  tags: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    flexWrap: 'wrap',
+  box: {
+    padding: 10,
+    margin: 10,
+    marginBottom: 0,
   },
-  child: {
-    flex: 1,
+  tag: {
+    alignSelf: 'center',
   },
 });

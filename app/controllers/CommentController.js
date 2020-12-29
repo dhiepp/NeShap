@@ -1,13 +1,18 @@
 import * as AppData from '../AppData';
 
 export default class PostController {
-  static async getFromPost(postid) {
+  static async list(post_id) {
     try {
       const response = await fetch(
-        `${AppData.server}/comment/get?postid=${postid}`,
+        `${AppData.server}/comment/list?post_id=${post_id}`,
         {method: 'get'},
       );
-      const json = await response.json();
+      let json = await response.json();
+      json = json.map((comment) => {
+        // eslint-disable-next-line prettier/prettier
+        comment.author.avatar = `${AppData.server}/user/avatar?user_id=${comment.author.user_id}&t=${Date.now()}`;
+        return comment;
+      });
       return json;
     } catch (exception) {
       console.log(exception);
@@ -17,12 +22,11 @@ export default class PostController {
   static async add(screen) {
     try {
       screen.setState({message: false});
+      const session_id = (await AppData.getUserData()).session_id;
       const data = {};
-      const userid = (await AppData.getUserData()).userid;
-      data.authorid = userid;
-      data.postid = screen.props.postid;
+      data.session_id = session_id;
+      data.post_id = screen.props.post_id;
       data.content = screen.state.new_comment;
-      console.log(data);
       const init = {
         method: 'post',
         headers: {
@@ -31,10 +35,10 @@ export default class PostController {
         body: JSON.stringify(data),
       };
 
-      const response = await fetch(`${AppData.server}/comment/add`, init);
+      const response = await fetch(`${AppData.server}/comment/write`, init);
       const json = await response.json();
       console.log(json);
-      if (json.status === 'success') {
+      if (json.status) {
         screen.setState({error: false, new_comment: ''});
       } else {
         screen.setState({error: true, message: json.message});
@@ -43,24 +47,22 @@ export default class PostController {
       console.log(exception);
     }
   }
+
   static async delete(screen) {
     try {
       screen.setState({message: false});
-      const comment = screen.state.selectedComment;
+      const comment = screen.state.selected_comment;
 
-      const userid = (await AppData.getUserData()).userid;
-      const postid = screen.props.postid;
-      const commentid = comment.commentid;
+      const session_id = (await AppData.getUserData()).session_id;
+      const comment_id = comment.comment_id;
 
       const response = await fetch(
-        `${
-          AppData.server
-        }/comment/delete?userid=${userid}&postid=${postid}&commentid=${commentid}`,
+        `${AppData.server}/comment/delete?session_id=${session_id}&comment_id=${comment_id}`,
         {method: 'post'},
       );
       const json = await response.json();
       console.log(json);
-      if (json.status === 'success') {
+      if (json.status) {
         screen.setState({
           error: false,
           message: 'Đã xóa bình luận!',

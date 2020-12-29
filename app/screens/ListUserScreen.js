@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {StyleSheet, View} from 'react-native';
+import {StyleSheet, View, ScrollView} from 'react-native';
 import {
   ActivityIndicator,
   Card,
@@ -15,13 +15,12 @@ import {
 } from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
-import {ScrollView} from 'react-native-gesture-handler';
 
 export default class ListUserScreen extends Component {
   state = {
     loading: true,
-    loadingmore: false,
-    nomore: false,
+    loading_more: false,
+    no_more: false,
     delete: false,
     message: false,
     users: [],
@@ -38,48 +37,45 @@ export default class ListUserScreen extends Component {
     return (
       <View style={styles.full}>
         <ScrollView>
-          <Card style={styles.box}>
-            {this.state.users.map(user => {
-              return (
+          {this.state.users.map((user) => {
+            return (
+              <Card style={styles.box} key={user.user_id}>
                 <List.Item
-                  key={user._id}
-                  title={user.username}
-                  description={`${
-                    user.followers ? user.followers.length : 0
-                  } người theo dõi`}
-                  left={props => (
+                  title={user.name}
+                  description={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
+                  left={(props) => (
                     <Avatar.Image
                       {...props}
                       size={64}
                       source={{uri: user.avatar}}
                     />
                   )}
-                  right={props => (
+                  right={(props) => (
                     <Button
                       {...props}
                       icon="delete"
                       color={Colors.redA200}
-                      onPress={() => this._showDialog(user._id)}>
+                      onPress={() => this._showDialog(user.user_id)}>
                       Xóa
                     </Button>
                   )}
-                  onPress={() => this._handleViewUser(user._id)}
+                  onPress={() => this._handleViewUser(user.user_id)}
                 />
-              );
-            })}
-            {this.state.nomore && this.state.page === 1 && (
-              <Headline style={styles.title}>Không có người dùng nào</Headline>
-            )}
-            {!this.state.nomore && (
-              <Button
-                loading={this.state.loadingmore}
-                disabled={this.state.nomore}
-                style={styles.more}
-                onPress={this._handleLoadMore}>
-                Xem thêm
-              </Button>
-            )}
-          </Card>
+              </Card>
+            );
+          })}
+          {this.state.no_more && this.state.page === 1 && (
+            <Headline style={styles.title}>Không có người dùng nào</Headline>
+          )}
+          {!this.state.no_more && (
+            <Button
+              loading={this.state.loading_more}
+              disabled={this.state.no_more}
+              style={styles.more}
+              onPress={this._handleLoadMore}>
+              Xem thêm
+            </Button>
+          )}
         </ScrollView>
         <Portal>
           <Dialog visible={this.state.delete} onDismiss={this._hideDialog}>
@@ -106,19 +102,20 @@ export default class ListUserScreen extends Component {
     );
   }
   async loadUsers(page) {
-    let oldUsers = this.state.users;
+    let current_users = this.state.users;
     let users = await UserController.list(page);
-    users = await Promise.all(
-      users.map(async user => await UserController.get(user._id)),
-    );
-    const nomore = !users.length;
-    this.setState({users: oldUsers.concat(users), page: page, nomore: nomore});
+    const no_more = !users.length;
+    this.setState({
+      users: current_users.concat(users),
+      page: page,
+      no_more: no_more,
+    });
   }
-  _handleViewUser = userid => {
-    UserController.view(this.props.navigation, userid);
+  _handleViewUser = (user_id) => {
+    UserController.view(this.props.navigation, user_id);
   };
-  _showDialog = userid => {
-    this.setState({delete: userid});
+  _showDialog = (user_id) => {
+    this.setState({delete: user_id});
   };
   _hideDialog = () => {
     this.setState({delete: false});
@@ -126,15 +123,15 @@ export default class ListUserScreen extends Component {
   _handleDeleteUser = () => {
     UserController.delete(this).then(() => {
       let users = this.state.users;
-      users = users.filter(user => user._id !== this.state.delete);
+      users = users.filter((user) => user.user_id !== this.state.delete);
       this.setState({users: users, delete: false});
     });
   };
   _handleLoadMore = () => {
     const page = this.state.page + 1;
-    this.setState({loadingmore: true});
+    this.setState({loading_more: true});
     this.loadUsers(page).then(() => {
-      this.setState({loadingmore: false});
+      this.setState({loading_more: false});
     });
   };
 }
@@ -147,6 +144,8 @@ const styles = StyleSheet.create({
   box: {
     padding: 10,
     margin: 10,
+    marginTop: 5,
+    marginBottom: 5,
   },
   title: {
     textAlign: 'center',

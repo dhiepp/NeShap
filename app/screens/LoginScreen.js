@@ -22,7 +22,7 @@ export default class LoginScreen extends Component {
           autoCapitalize="none"
           maxLength={20}
           style={styles.child}
-          onChangeText={text => this.setState({name: text})}
+          onChangeText={(text) => this.setState({name: text})}
         />
         <TextInput
           label="Mật khẩu"
@@ -30,7 +30,7 @@ export default class LoginScreen extends Component {
           secureTextEntry={true}
           numberOfLines={1}
           style={styles.child}
-          onChangeText={text => this.setState({password: text})}
+          onChangeText={(text) => this.setState({password: text})}
         />
         <Button
           mode="contained"

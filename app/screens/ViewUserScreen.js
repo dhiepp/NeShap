@@ -1,10 +1,9 @@
 import React, {Component} from 'react';
-import {StyleSheet, RefreshControl, View} from 'react-native';
+import {StyleSheet, RefreshControl, View, ScrollView} from 'react-native';
 import {
   ActivityIndicator,
   Headline,
   Avatar,
-  Colors,
   Title,
   Button,
   Card,
@@ -12,10 +11,9 @@ import {
   Subheading,
   Caption,
 } from 'react-native-paper';
-import {ScrollView} from 'react-native-gesture-handler';
 
 import UserController from '../controllers/UserController';
-import ListPost from './components/ListPost';
+import ListPostComponent from './components/ListPostComponent';
 
 export default class ViewUserScreen extends Component {
   state = {
@@ -50,33 +48,24 @@ export default class ViewUserScreen extends Component {
               source={{uri: this.state.user.avatar}}
               style={styles.avatar}
             />
-            <Title style={styles.title}>{this.state.user.username}</Title>
-            <Caption style={styles.child}>
-              {this.state.followers.length} người theo dõi
-            </Caption>
+            <Title style={styles.title}>{this.state.user.name}</Title>
+            {this.state.f1 && (
+              <Caption style={styles.child}>{this.state.status}</Caption>
+            )}
             {(this.state.perm.value === 1 || this.state.perm.value === 3) && (
               <Button
-                mode="contained"
-                icon={this.state.followed ? 'account-remove' : 'account-plus'}
+                mode={this.state.f2 ? 'text' : 'contained'}
+                icon={this.state.f2 ? 'account-remove' : 'account-plus'}
                 style={styles.child}
-                onPress={this._handleFollow}>
-                {this.state.followed ? 'Hủy theo dõi' : 'Theo dõi'}
-              </Button>
-            )}
-            {(this.state.perm.value === 2 || this.state.perm.value === 3) && (
-              <Button
-                color={this.state.perm.value === 3 ? Colors.redA200 : ''}
-                icon="account-edit"
-                style={styles.child}
-                onPress={this._handleEdit}>
-                Sửa thông tin
+                onPress={this._handleFriend}>
+                {this.state.f2 ? 'Hủy kết bạn' : 'Kết bạn'}
               </Button>
             )}
           </Card>
           <Subheading style={styles.title}>Các bài viết</Subheading>
-          <ListPost
-            mode="pro"
-            userid={this.state.user._id}
+          <ListPostComponent
+            mode="profile"
+            user_id={this.state.user.user_id}
             navigation={this.props.navigation}
             refresh={this.state.refresh}
             onFinishRefresh={this._finishRefresh}
@@ -96,25 +85,29 @@ export default class ViewUserScreen extends Component {
     );
   }
   async loadUser() {
-    let userid = this.props.route.params
-      ? this.props.route.params.userid
-      : undefined;
-    const user = await UserController.get(userid);
-    userid = user._id;
-    let perm = await UserController.checkPerm(userid);
-    const followers = user.followers ? user.followers : [];
-    const followed = followers.includes(perm.userid);
-    if (userid === perm.userid) {
-      perm.value = 2;
-    }
+    const user_id = this.props.route.params?.user_id;
+    const data = await UserController.profile(user_id);
+    const perm = await UserController.checkPerm(user_id);
     this.setState({
       loading: false,
       refresh: false,
-      user: user,
+      user: data.user,
       perm: perm,
-      followers: followers,
-      followed: followed,
+      f1: data.f1,
+      f2: data.f2,
     });
+    this.updateFriendship();
+  }
+  updateFriendship() {
+    let status;
+    if (this.state.f1) {
+      if (this.state.f2) {
+        status = 'Đã là bạn bè của nhau';
+      } else {
+        status = 'Đã gửi lời mời đến bạn';
+      }
+    }
+    this.setState({status: status});
   }
   _handleRefresh = () => {
     this.setState({refresh: true});
@@ -123,11 +116,8 @@ export default class ViewUserScreen extends Component {
   _finishRefresh = () => {
     this.setState({refresh: false});
   };
-  _handleFollow = () => {
-    UserController.follow(this);
-  };
-  _handleEdit = () => {
-    this.props.navigation.navigate('EditUser', {userid: this.state.user._id});
+  _handleFriend = () => {
+    UserController.friend(this).then(() => this.updateFriendship());
   };
 }
 

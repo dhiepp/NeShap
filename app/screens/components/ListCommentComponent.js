@@ -20,8 +20,13 @@ import {
 import UserController from '../../controllers/UserController';
 import CommentController from '../../controllers/CommentController';
 
-class ViewComment extends Component {
-  state = {loading: true, error: false, message: false, selectedComment: false};
+class ListCommentComponent extends Component {
+  state = {
+    loading: true,
+    error: false,
+    message: false,
+    selected_comment: false,
+  };
   async componentDidMount() {
     await this.updateComments();
     this.setState({loading: false});
@@ -37,27 +42,26 @@ class ViewComment extends Component {
       <View>
         <Card style={styles.box} onPress={() => Keyboard.dismiss()}>
           <Title style={styles.title}>Bình luận</Title>
-          {this.state.perm.value > 0 && (
-            <View style={styles.new_comment_box}>
-              <TextInput
-                label="Thêm bình luận"
-                mode="outlined"
-                value={this.state.new_comment}
-                style={styles.new_comment_input}
-                onChangeText={text => this._handleCommentInput(text)}
-              />
-              <IconButton
-                icon="send"
-                color={this.props.theme.colors.primary}
-                style={styles.new_comment_button}
-                onPress={this._handleAddComment}
-              />
-            </View>
-          )}
-          {this.state.comments.map(comment => (
+          <View style={styles.new_comment_box}>
+            <TextInput
+              label="Thêm bình luận"
+              mode="outlined"
+              value={this.state.new_comment}
+              style={styles.new_comment_input}
+              onChangeText={(text) => this._handleCommentInput(text)}
+              onSubmitEditing={this._handleAddComment}
+            />
+            <IconButton
+              icon="send"
+              color={this.props.theme.colors.primary}
+              style={styles.new_comment_button}
+              onPress={this._handleAddComment}
+            />
+          </View>
+          {this.state.comments.map((comment) => (
             <TouchableRipple
               borderless
-              key={comment.commentid}
+              key={comment.comment_id}
               onPress={() => {}}
               onLongPress={() => this._handleCommentAction(comment)}
               style={styles.comment_box}>
@@ -65,14 +69,14 @@ class ViewComment extends Component {
                 <TouchableRipple
                   borderles
                   style={styles.author_box}
-                  onPress={() => this._handleViewUser(comment.author._id)}>
+                  onPress={() => this._handleViewUser(comment.author.user_id)}>
                   <View style={styles.comment_author}>
                     <Avatar.Image
                       size={32}
                       source={{uri: comment.author.avatar}}
                     />
                     <Subheading style={styles.comment_username}>
-                      {comment.author.username}
+                      {comment.author.name}
                     </Subheading>
                   </View>
                 </TouchableRipple>
@@ -83,7 +87,7 @@ class ViewComment extends Component {
         </Card>
         <Portal>
           <Dialog
-            visible={this.state.selectedComment}
+            visible={this.state.selected_comment}
             onDismiss={this._hideDialog}>
             <Dialog.Title>Bình luận</Dialog.Title>
             <Dialog.Content>
@@ -99,27 +103,18 @@ class ViewComment extends Component {
     );
   }
   async updateComments() {
-    let comments = await CommentController.getFromPost(this.props.postid);
-    const perm = await UserController.checkPerm(this.props.postid);
+    let comments = await CommentController.list(this.props.post_id);
     comments = await Promise.all(
-      comments.reverse().map(async comment => {
-        const author = await UserController.get(comment.authorid);
-        let cPerm = perm.value;
-        if (perm.userid === comment.authorid) {
-          cPerm = 2;
-        }
-        return {
-          commentid: comment._id,
-          author: author,
-          content: comment.content,
-          perm: cPerm,
-        };
+      comments.map(async (comment) => {
+        const perm = await UserController.checkPerm(comment.author.user_id);
+        comment.perm = perm.value;
+        return comment;
       }),
     );
     this.props.onFinishRefresh();
-    this.setState({comments: comments, perm: perm});
+    this.setState({comments: comments});
   }
-  _handleCommentInput = text => {
+  _handleCommentInput = (text) => {
     this.setState({new_comment: text});
   };
   _handleAddComment = () => {
@@ -131,15 +126,15 @@ class ViewComment extends Component {
       }
     });
   };
-  _handleViewUser = userid => {
-    if (userid === undefined) {
+  _handleViewUser = (user_id) => {
+    if (user_id === undefined) {
       return;
     }
-    this.props.navigation.push('ViewUser', {userid: userid});
+    this.props.navigation.push('ViewUser', {user_id: user_id});
   };
-  _handleCommentAction = comment => {
+  _handleCommentAction = (comment) => {
     if (comment.perm >= 2) {
-      this.setState({selectedComment: comment});
+      this.setState({selected_comment: comment});
     }
   };
   _handleDeleteComment = () => {
@@ -147,21 +142,23 @@ class ViewComment extends Component {
       this._handleMessage();
       if (!this.state.error) {
         let comments = this.state.comments;
-        const selectedid = this.state.selectedComment.commentid;
-        comments = comments.filter(comment => comment.commentid !== selectedid);
-        this.setState({comments: comments, selectedComment: false});
+        const selected_id = this.state.selected_comment.comment_id;
+        comments = comments.filter(
+          (comment) => comment.comment_id !== selected_id,
+        );
+        this.setState({comments: comments, selected_comment: false});
       }
     });
   };
   _hideDialog = () => {
-    this.setState({selectedComment: false});
+    this.setState({selected_comment: false});
   };
   _handleMessage = () => {
     this.props.onMessage(this.state.message);
   };
 }
 
-export default withTheme(ViewComment);
+export default withTheme(ListCommentComponent);
 
 const styles = StyleSheet.create({
   full: {

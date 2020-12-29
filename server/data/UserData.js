@@ -1,13 +1,16 @@
 const Neo4j = require('./Neo4j');
 const sharp = require('sharp');
+const fs = require('fs');
 
 module.exports = class UserData {
 	static async getByUserID(user_id) {
+		if (!user_id) return null;
 		const result = await Neo4j.run('MATCH (u:User {user_id: $userParam}) RETURN u LIMIT 1', { userParam: user_id });
 		return result.records[0]?.get('u')?.properties;
 	}
 
 	static async getByName(name) {
+		if (!name) return null;
 		const result = await Neo4j.run('MATCH (u:User {name: $nameParam}) RETURN u LIMIT 1', { nameParam: name });
 		return result.records[0]?.get('u')?.properties;
 	}
@@ -17,6 +20,14 @@ module.exports = class UserData {
 
 		const result = await Neo4j.run('MATCH (u:User)-[:HAS_SESSION]->(s:Session {session_id: $sessionParam}) RETURN u.user_id LIMIT 1',
 			{ sessionParam: session_id });
+		return result.records[0]?.get('u.user_id');
+	}
+
+	static async verify_admin(session_id) {
+		if (!session_id) return false;
+
+		const result = await Neo4j.run(`MATCH (u:User)-[:HAS_SESSION]->(s:Session {session_id: $sessionParam}) 
+			WHERE u.role = 1 RETURN u.user_id LIMIT 1`, { sessionParam: session_id });
 		return result.records[0]?.get('u.user_id');
 	}
 
@@ -36,14 +47,15 @@ module.exports = class UserData {
 			}
 
 			const result = await Neo4j.run(`CREATE (u:User {user_id:randomUUID(), name:$nameParam, password: $passwordParam, role: 0})
-				-[:HAS_SESSION]->(s:Session {session_id: randomUUID(), time: datetime()}) RETURN u.user_id, s.session_id`,
+				-[:HAS_SESSION]->(s:Session {session_id: randomUUID(), time: datetime()}) RETURN u.user_id, s.session_id, u.role`,
 			{ nameParam: name, passwordParam: password });
 			const record = result.records[0];
 			if (!record) throw 'User Register failed';
 
 			const user_id = record.get('u.user_id');
 			const session_id = record.get('s.session_id');
-			return { status: true, user_id: user_id, session_id: session_id };
+			const role = Neo4j.int(record.get('u.role')).toInt();
+			return { status: true, user_id: user_id, session_id: session_id, role: role };
 		}
 		catch (exception) {
 			console.log(exception);
@@ -64,7 +76,7 @@ module.exports = class UserData {
 			}
 
 			const result = await Neo4j.run(`MATCH (u:User {name:$nameParam, password: $passwordParam})-[:HAS_SESSION]->(s:Session) 
-				RETURN u.user_id, s.session_id LIMIT 1`, { nameParam: name, passwordParam: password });
+				RETURN u.user_id, s.session_id, u.role LIMIT 1`, { nameParam: name, passwordParam: password });
 			const record = result.records[0];
 			if (!record) {
 				return { status: false, message: 'Sai tên tài khoản hoặc mật khẩu!' };
@@ -72,7 +84,8 @@ module.exports = class UserData {
 
 			const user_id = record.get('u.user_id');
 			const session_id = record.get('s.session_id');
-			return { status: true, user_id: user_id, session_id: session_id };
+			const role = Neo4j.int(record.get('u.role')).toInt();
+			return { status: true, user_id: user_id, session_id: session_id, role: role };
 		}
 		catch (exception) {
 			console.log(exception);
@@ -83,7 +96,7 @@ module.exports = class UserData {
 	static async profile(query) {
 		try {
 			const user_id = query.user_id;
-			const viewer_id = query.viewer_id ? query.viewer_id : null;
+			const viewer_id = query.viewer_id;
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) OPTIONAL MATCH (v:User {user_id: $viewerParam}) 
 				OPTIONAL MATCH (u)-[f1:FRIENDS]->(v) OPTIONAL MATCH (u)<-[f2:FRIENDS]-(v) RETURN u, f1, f2`,
@@ -94,7 +107,8 @@ module.exports = class UserData {
 			const user = record.get('u').properties;
 			const f1 = record.get('f1') ? true : false;
 			const f2 = record.get('f2') ? true : false;
-			return { name: user.name, f1: f1, f2: f2 };
+			const role = Neo4j.int(user.role)?.toInt();
+			return { user: { user_id: user.user_id, name: user.name, role: role }, f1: f1, f2: f2 };
 		}
 		catch (exception) {
 			console.log(exception);
@@ -102,8 +116,9 @@ module.exports = class UserData {
 		}
 	}
 
-	static async edit(data, avatar) {
+	static async edit(data_string, avatar) {
 		try {
+			const data = JSON.parse(data_string);
 			const session_id = data.session_id;
 			const name = data.name ? data.name.toLowerCase() : undefined;
 			const password = data.password;
@@ -144,68 +159,10 @@ module.exports = class UserData {
 		}
 	}
 
-	// static async perm(userid, checkid) {
-	// 	const user = await this.getByID(userid);
-	// 	const check = await this.checkExistByID(userid);
-	// 	// Invalid user
-	// 	if (!user || !check) return 0;
-	// 	// The same user
-	// 	if (userid === checkid) return 2;
-	// 	// Admin
-	// 	if (user.role === 1) return 3;
-	// 	// Normal user
-	// 	return 1;
-	// }
-
-
-	// static async list(query) {
-	// 	try {
-	// 		const adminid = query.adminid;
-	// 		const page = query.page;
-	// 		const userCollection = await Connection.getCollection('user');
-
-	// 		const admin = await this.getByID(adminid);
-	// 		if (!admin || admin.role < 1) {
-	// 			return null;
-	// 		}
-	// 		const cursor = await userCollection.find({},
-	// 			{ projection: { _id: true }, sort: { name: 1 }, skip: 10 * (page - 1), limit: 10 });
-	// 		const result = cursor.toArray();
-	// 		return result;
-	// 	}
-	// 	catch (exception) {
-	// 		console.log(exception);
-	// 		return [];
-	// 	}
-	// }
-
-
-	// static async delete(query) {
-	// 	try {
-	// 		const adminid = query.adminid;
-	// 		const deleteid = query.deleteid;
-
-	// 		if (UserData.checkPerm(adminid, deleteid) < 3) {
-	// 			return { status: 'fail', message: 'Không có quyền xóa tài khoản!' };
-	// 		}
-
-	// 		const userCollection = await Connection.getCollection('user');
-	// 		const result = await userCollection.deleteOne({ _id: new ObjectID(deleteid) });
-	// 		if (result.modifiedCount === 0) {
-	// 			return { status: 'fail', message: 'Tài khoản không bị xóa!' };
-	// 		}
-	// 		return { status: 'success' };
-	// 	}
-	// 	catch (exception) {
-	// 		console.log(exception);
-	// 		return { status: 'fail', message: 'Không thể xóa tài khoản!' };
-	// 	}
-	// }
-
 	static async friend(query) {
 		try {
 			const session_id = query.session_id;
-			const friend_id = query.friend_id;
+			const friend_id = query.friend_id ? query.friend_id : null;
 
 			const user_id = await this.verify(session_id);
 			if (!user_id) {
@@ -214,10 +171,12 @@ module.exports = class UserData {
 			if (user_id == session_id) throw 'User Friend to self!';
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (f:User {user_id: $friendParam})
-				MERGE (u)-[r:FRIENDS]->(f)`, { userParam: user_id, friendParam: friend_id });
+				OPTIONAL MATCH (u)<-[f1:FRIENDS]-(f) MERGE (u)-[:FRIENDS]->(f) RETURN f1`,
+			{ userParam: user_id, friendParam: friend_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'User Friend failed!';
 
-			return { status: true };
+			const f1 = result.records[0]?.get('f1') ? true : false;
+			return { status: true, f1: f1, f2: true };
 		}
 		catch (exception) {
 			console.log(exception);
@@ -228,7 +187,7 @@ module.exports = class UserData {
 	static async unfriend(query) {
 		try {
 			const session_id = query.session_id;
-			const friend_id = query.friend_id;
+			const friend_id = query.friend_id ? query.friend_id : null;
 
 			const user_id = await this.verify(session_id);
 			if (!user_id) {
@@ -240,11 +199,60 @@ module.exports = class UserData {
 				DELETE r`, { userParam: user_id, friendParam: friend_id });
 			if (result.summary.counters.updates().relationshipsDeleted == 0) throw 'User Unfriend failed!';
 
-			return { status: true };
+			return { status: true, f1: false, f2: false };
 		}
 		catch (exception) {
 			console.log(exception);
 			return { status: false, message: 'Không thể hủy kết bạn!' };
 		}
 	}
+
+	static async list(query) {
+		try {
+			const session_id = query.session_id;
+			const page = query.page;
+
+			const user_id = await this.verify_admin(session_id);
+			if (!user_id) throw 'List User failed: Invalid session or non admin';
+
+			const skip = Neo4j.int((page - 1) * 10);
+			const limit = Neo4j.int(10);
+			const result = await Neo4j.run('MATCH (u:User) RETURN u ORDER BY u.role DESC, u.name SKIP $skip LIMIT $limit', { skip: skip, limit: limit });
+
+			const users = result.records.map(record => {
+				const user = record.get('u')?.properties;
+				const role = Neo4j.int(user.role)?.toInt();
+				return { user_id: user.user_id, name: user.name, role: role };
+			});
+			return users;
+		}
+		catch (exception) {
+			console.log(exception);
+			return [];
+		}
+	}
+
+	static async delete(query) {
+		try {
+			const session_id = query.session_id;
+			const delete_id = query.delete_id;
+
+			const user_id = await this.verify_admin(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+			}
+			const result = await Neo4j.run('MATCH (u:User {user_id: $deleteParam}) DETACH DELETE u', { deleteParam: delete_id });
+			if (result.summary.counters.updates().deletedNodes == 0) {
+				return { status: false, message: 'Tài khoản không bị xóa!' };
+			}
+
+			fs.unlink(`./images/avatar/${delete_id}.jpg`, () => null);
+			return { status: true };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: false, message: 'Không thể xóa tài khoản!' };
+		}
+	}
+
 };

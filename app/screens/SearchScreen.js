@@ -1,6 +1,5 @@
 import React, {Component} from 'react';
-import {ScrollView} from 'react-native-gesture-handler';
-import {View, StyleSheet, Keyboard} from 'react-native';
+import {View, StyleSheet, Keyboard, ScrollView} from 'react-native';
 import {
   Card,
   Searchbar,
@@ -13,15 +12,13 @@ import {
   Headline,
 } from 'react-native-paper';
 
-import ListPost from './components/ListPost';
+import ListPostComponent from './components/ListPostComponent';
 import UserController from '../controllers/UserController';
 
 class SearchScreen extends Component {
   state = {
     refresh: false,
     keyword: '',
-    tag: false,
-    user: false,
     message: 'Hãy nhập từ khóa tìm kiếm',
   };
   scroll;
@@ -34,13 +31,13 @@ class SearchScreen extends Component {
             value={this.state.keyword}
             autoCapitalize="none"
             iconColor={this.props.theme.colors.primary}
-            onChangeText={text => this._handleSearchInput(text)}
+            onChangeText={(text) => this._handleSearchInput(text)}
             onIconPress={this._handleSearch}
             onSubmitEditing={this._handleSearch}
           />
         </Card>
         <ScrollView
-          ref={r => {
+          ref={(r) => {
             this.scroll = r;
           }}>
           <View style={styles.inline}>
@@ -67,7 +64,7 @@ class SearchScreen extends Component {
                       style={styles.comment_avatar}
                     />
                     <Subheading style={styles.username}>
-                      {this.state.user.username}
+                      {this.state.user.name}
                     </Subheading>
                   </View>
                 </TouchableRipple>
@@ -77,8 +74,8 @@ class SearchScreen extends Component {
           {this.state.message ? (
             <Headline style={styles.title}>{this.state.message}</Headline>
           ) : (
-            <ListPost
-              mode="src"
+            <ListPostComponent
+              mode="search"
               keyword={this.state.keyword}
               navigation={this.props.navigation}
               refresh={this.state.refresh}
@@ -91,7 +88,7 @@ class SearchScreen extends Component {
     );
   }
 
-  _handleSearchInput = text => {
+  _handleSearchInput = (text) => {
     if (!text) {
       this.setState({search: false});
     }
@@ -100,18 +97,15 @@ class SearchScreen extends Component {
   _handleSearch = async () => {
     Keyboard.dismiss();
     const keyword = this.state.keyword.toLowerCase();
-    let tag = false;
-    let user = false;
     if (keyword.length < 3) {
       this.setState({message: 'Từ khóa quá ngắn!', tag: tag, user: user});
       return;
     }
+    let tag;
+    let user;
     if (keyword.match(/^[0-9a-zA-Z,]{3,20}$/)) {
       tag = keyword;
-      const searchuser = await UserController.search(keyword);
-      if (searchuser) {
-        user = searchuser;
-      }
+      user = await UserController.search(keyword);
     }
     this.setState({refresh: true, message: false, tag: tag, user: user});
   };
@@ -119,7 +113,7 @@ class SearchScreen extends Component {
     this.props.navigation.push('ViewTag', {tag: this.state.tag});
   };
   _handleViewUser = () => {
-    this.props.navigation.push('ViewUser', {userid: this.state.user._id});
+    this.props.navigation.push('ViewUser', {userid: this.state.user.user_id});
   };
   _finishRefresh = () => {
     this.setState({refresh: false});

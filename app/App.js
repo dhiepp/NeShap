@@ -4,6 +4,7 @@ import {createStackNavigator} from '@react-navigation/stack';
 import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
+import WelcomeScreen from './screens/WelcomeScreen';
 import HomeScreen from './screens/HomeScreen';
 import SearchScreen from './screens/SearchScreen';
 import AccountScreen from './screens/AccountScreen';
@@ -26,6 +27,7 @@ class HomeTabs extends Component {
       <Tab.Navigator
         initialRouteName="Home"
         backBehavior="initialRoute"
+        barStyle={{backgroundColor: '#6200ee'}}
         shifting={true}>
         <Tab.Screen
           name="Home"
@@ -66,6 +68,11 @@ export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{headerShown: false}}
+        />
         <Stack.Screen
           name="HomeTabs"
           component={HomeTabs}
