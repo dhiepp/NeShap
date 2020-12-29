@@ -113,7 +113,7 @@ class SearchScreen extends Component {
     this.props.navigation.push('ViewTag', {tag: this.state.tag});
   };
   _handleViewUser = () => {
-    this.props.navigation.push('ViewUser', {userid: this.state.user.user_id});
+    this.props.navigation.push('ViewUser', {user_id: this.state.user.user_id});
   };
   _finishRefresh = () => {
     this.setState({refresh: false});

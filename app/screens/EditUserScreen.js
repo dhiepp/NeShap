@@ -26,7 +26,11 @@ export default class EditUserScreen extends Component {
   async componentDidMount() {
     const user_id = this.props.route.params?.user_id;
     const profile = await UserController.profile(user_id);
-    this.setState({loading: false, user: profile.user});
+    this.setState({
+      loading: false,
+      user: profile.user,
+      new_name: profile.user.name,
+    });
   }
   render() {
     if (this.state.loading) {
@@ -59,7 +63,7 @@ export default class EditUserScreen extends Component {
               label="Tên đăng nhập"
               mode="outlined"
               maxLength={20}
-              defaultValue={this.state.user.name}
+              defaultValue={this.state.new_name}
               style={styles.child}
               onChangeText={(text) => this.setState({new_name: text})}
             />

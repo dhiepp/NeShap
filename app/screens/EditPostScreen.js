@@ -36,9 +36,9 @@ export default class EditPostScreen extends Component {
     this.setState({
       loading: false,
       post: post,
-      edit_tags: edit_tags,
       new_title: post.title,
       new_content: post.content,
+      edit_tags: edit_tags,
     });
   }
   render() {
@@ -72,7 +72,7 @@ export default class EditPostScreen extends Component {
               mode="outlined"
               multiline={false}
               maxLength={50}
-              defaultValue={this.state.post.title}
+              defaultValue={this.state.new_title}
               style={styles.child}
               onChangeText={(text) => this.setState({new_title: text})}
             />
@@ -80,7 +80,7 @@ export default class EditPostScreen extends Component {
               label="Nội dung"
               mode="outlined"
               multiline={true}
-              defaultValue={this.state.post.content}
+              defaultValue={this.state.new_content}
               style={styles.child}
               onChangeText={(text) => this.setState({new_content: text})}
             />

@@ -19,7 +19,6 @@ import {
   Headline,
   TouchableRipple,
 } from 'react-native-paper';
-import moment from 'moment';
 
 import PostController from '../controllers/PostController';
 import UserController from '../controllers/UserController';
@@ -59,7 +58,7 @@ export default class ViewPostScreen extends Component {
               onPress={this._handleViewAuthor}>
               <Card.Title
                 title={this.state.post.author.name}
-                subtitle={this.state.time}
+                subtitle={this.state.post.time}
                 left={(props) => (
                   <Avatar.Image
                     size={props.size}
@@ -141,13 +140,11 @@ export default class ViewPostScreen extends Component {
       return;
     }
     const perm = await UserController.checkPerm(post.author.user_id);
-    const time = moment(post.time).fromNow();
     this.setState({
       loading: false,
       refresh: false,
       post: post,
       perm: perm,
-      time: time,
     });
   }
   _handleRefresh = () => {

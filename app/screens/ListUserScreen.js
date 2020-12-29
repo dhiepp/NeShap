@@ -6,7 +6,7 @@ import {
   Avatar,
   Button,
   Colors,
-  List,
+  TouchableRipple,
   Headline,
   Portal,
   Dialog,
@@ -40,7 +40,30 @@ export default class ListUserScreen extends Component {
           {this.state.users.map((user) => {
             return (
               <Card style={styles.box} key={user.user_id}>
-                <List.Item
+                <TouchableRipple
+                  borderles
+                  onPress={() => this._handleViewUser(user.user_id)}>
+                  <Card.Title
+                    title={user.name}
+                    subtitle={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
+                    left={(props) => (
+                      <Avatar.Image
+                        size={props.size}
+                        source={{uri: user.avatar}}
+                        style={styles.avatar}
+                      />
+                    )}
+                    right={() => (
+                      <Button
+                        icon="delete"
+                        color={Colors.redA200}
+                        onPress={() => this._showDialog(user.user_id)}>
+                        Xóa
+                      </Button>
+                    )}
+                  />
+                </TouchableRipple>
+                {/* <List.Item
                   title={user.name}
                   description={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
                   left={(props) => (
@@ -60,7 +83,7 @@ export default class ListUserScreen extends Component {
                     </Button>
                   )}
                   onPress={() => this._handleViewUser(user.user_id)}
-                />
+                /> */}
               </Card>
             );
           })}
@@ -144,8 +167,7 @@ const styles = StyleSheet.create({
   box: {
     padding: 10,
     margin: 10,
-    marginTop: 5,
-    marginBottom: 5,
+    marginTop: 0,
   },
   title: {
     textAlign: 'center',

@@ -15,6 +15,7 @@ import {
   Colors,
   withTheme,
   Title,
+  Caption,
 } from 'react-native-paper';
 
 import UserController from '../../controllers/UserController';
@@ -62,25 +63,31 @@ class ListCommentComponent extends Component {
             <TouchableRipple
               borderless
               key={comment.comment_id}
-              onPress={() => {}}
+              onPress={() => null}
               onLongPress={() => this._handleCommentAction(comment)}
               style={styles.comment_box}>
               <View>
-                <TouchableRipple
-                  borderles
-                  style={styles.author_box}
-                  onPress={() => this._handleViewUser(comment.author.user_id)}>
-                  <View style={styles.comment_author}>
-                    <Avatar.Image
-                      size={32}
-                      source={{uri: comment.author.avatar}}
-                    />
-                    <Subheading style={styles.comment_username}>
-                      {comment.author.name}
-                    </Subheading>
-                  </View>
-                </TouchableRipple>
-                <Paragraph>{comment.content}</Paragraph>
+                <View style={styles.info_box}>
+                  <TouchableRipple
+                    borderles
+                    onPress={() =>
+                      this._handleViewUser(comment.author.user_id)
+                    }>
+                    <View style={styles.comment_author}>
+                      <Avatar.Image
+                        size={32}
+                        source={{uri: comment.author.avatar}}
+                      />
+                      <Subheading style={styles.comment_username}>
+                        {comment.author.name}
+                      </Subheading>
+                    </View>
+                  </TouchableRipple>
+                  <Caption>{comment.time}</Caption>
+                </View>
+                <Paragraph style={styles.comment_content}>
+                  {comment.content}
+                </Paragraph>
               </View>
             </TouchableRipple>
           ))}
@@ -192,11 +199,17 @@ const styles = StyleSheet.create({
   },
   comment_box: {
     flexDirection: 'column',
-    alignItems: 'flex-start',
     borderRadius: 20,
     padding: 10,
     margin: 5,
     backgroundColor: Colors.grey200,
+  },
+  info_box: {
+    justifyContent: 'space-between',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingLeft: 10,
+    paddingRight: 10,
   },
   comment_author: {
     flexDirection: 'row',
@@ -205,5 +218,8 @@ const styles = StyleSheet.create({
   comment_username: {
     fontWeight: 'bold',
     marginLeft: 10,
+  },
+  comment_content: {
+    margin: 10,
   },
 });

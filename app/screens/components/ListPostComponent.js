@@ -8,7 +8,6 @@ import {
   Title,
   Headline,
 } from 'react-native-paper';
-import moment from 'moment';
 
 import PostController from '../../controllers/PostController';
 
@@ -36,7 +35,7 @@ export default class ListPostComponent extends Component {
               onPress={() => this._handleViewPost(post.post_id)}>
               <Card.Title
                 title={post.author.name}
-                subtitle={moment(post.time).fromNow()}
+                subtitle={post.time}
                 left={(props) => (
                   <Avatar.Image
                     size={props.size}

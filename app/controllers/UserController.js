@@ -167,7 +167,6 @@ export default class UserController {
         // eslint-disable-next-line prettier/prettier
         json.avatar = `${AppData.server}/user/avatar?user_id=${json.user_id}&t=${Date.now()}`;
       }
-      console.log(json);
       return json;
     } catch (exception) {
       console.log(exception);
@@ -177,7 +176,7 @@ export default class UserController {
 
   static async edit(screen) {
     try {
-      screen.setState({message: false});
+      screen.setState({message: false, loading: true});
 
       const request = {};
       request.session_id = (await AppData.getUserData()).session_id;
@@ -206,9 +205,13 @@ export default class UserController {
       const json = await response.json();
       console.log(json);
       if (json.status) {
-        screen.setState({error: false, message: 'Đã lưu thông tin cá nhân'});
+        screen.setState({
+          error: false,
+          loading: false,
+          message: 'Đã lưu thông tin cá nhân',
+        });
       } else {
-        screen.setState({error: true, message: json.message});
+        screen.setState({error: true, loading: false, message: json.message});
       }
     } catch (exception) {
       console.log(exception);

@@ -1,4 +1,5 @@
 import * as AppData from '../AppData';
+import TimeUtils from '../utils/TimeUtils';
 
 export default class PostController {
   static async list(post_id) {
@@ -11,6 +12,7 @@ export default class PostController {
       json = json.map((comment) => {
         // eslint-disable-next-line prettier/prettier
         comment.author.avatar = `${AppData.server}/user/avatar?user_id=${comment.author.user_id}&t=${Date.now()}`;
+        comment.time = TimeUtils.translate(comment.time);
         return comment;
       });
       return json;

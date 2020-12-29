@@ -1,6 +1,7 @@
 import {CommonActions} from '@react-navigation/native';
 
 import * as AppData from '../AppData';
+import TimeUtils from '../utils/TimeUtils';
 
 export default class PostController {
   static cover(post_id) {
@@ -58,7 +59,7 @@ export default class PostController {
 
   static async edit(screen) {
     try {
-      screen.setState({message: false});
+      screen.setState({message: false, loading: true});
       const request = {};
       request.session_id = (await AppData.getUserData()).session_id;
       request.post_id = screen.state.post.post_id;
@@ -85,9 +86,13 @@ export default class PostController {
       const json = await response.json();
       console.log(json);
       if (json.status) {
-        screen.setState({error: false, message: 'Đã sửa bài viết'});
+        screen.setState({
+          error: false,
+          loading: false,
+          message: 'Đã sửa bài viết',
+        });
       } else {
-        screen.setState({error: true, message: json.message});
+        screen.setState({error: true, loading: false, message: json.message});
       }
     } catch (exception) {
       console.log(exception);
@@ -130,6 +135,7 @@ export default class PostController {
       json.author.avatar = `${AppData.server}/user/avatar?user_id=${json.author.user_id}&t=${Date.now()}`;
       // eslint-disable-next-line prettier/prettier
       json.cover = `${AppData.server}/post/cover?post_id=${post_id}&t=${Date.now()}`;
+      json.time = TimeUtils.translate(json.time);
       return json;
     } catch (exception) {
       console.log(exception);
@@ -154,6 +160,7 @@ export default class PostController {
         post.author.avatar = `${AppData.server}/user/avatar?user_id=${post.author.user_id}&t=${Date.now()}`;
         // eslint-disable-next-line prettier/prettier
         post.cover = `${AppData.server}/post/cover?post_id=${post.post_id}&t=${Date.now()}`;
+        post.time = TimeUtils.translate(post.time);
         return post;
       });
       return json;
