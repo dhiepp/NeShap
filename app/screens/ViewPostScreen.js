@@ -63,7 +63,6 @@ export default class ViewPostScreen extends Component {
                   <Avatar.Image
                     size={props.size}
                     source={{uri: this.state.post.author.avatar}}
-                    style={styles.avatar}
                   />
                 )}
                 right={() => {

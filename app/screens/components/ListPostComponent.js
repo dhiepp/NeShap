@@ -15,7 +15,7 @@ export default class ListPostComponent extends Component {
   state = {loading: true, loading_more: false, no_more: false, posts: []};
   async componentDidMount() {
     const page = this.props.page ? this.props.page : 1;
-    await this.loadPosts(page);
+    await this.loadPosts(page, false);
     this.setState({loading: false});
   }
   render() {
@@ -23,14 +23,14 @@ export default class ListPostComponent extends Component {
       return <ActivityIndicator size="large" style={styles.full} />;
     }
     if (this.props.refresh) {
-      this.loadPosts(1);
+      this.loadPosts(1, true);
     }
     return (
       <View style={styles.full}>
-        {this.state.posts.map((post) => {
+        {this.state.posts.map((post, index) => {
           return (
             <Card
-              key={post.post_id}
+              key={index}
               style={styles.box}
               onPress={() => this._handleViewPost(post.post_id)}>
               <Card.Title
@@ -71,19 +71,17 @@ export default class ListPostComponent extends Component {
       </View>
     );
   }
-  async loadPosts(page) {
+  async loadPosts(page, refresh) {
     const mode = this.props.mode;
     const user_id = this.props.user_id;
     const keyword = this.props.keyword;
-    let currentPosts = this.state.posts;
-    if (this.props.refresh) {
-      currentPosts = [];
-    }
+
+    let current_posts = refresh ? [] : this.state.posts;
     let posts = await PostController.list(mode, page, user_id, keyword);
     this.props.onFinishRefresh();
     const no_more = !posts.length;
     this.setState({
-      posts: currentPosts.concat(posts),
+      posts: current_posts.concat(posts),
       page: page,
       no_more: no_more,
     });
@@ -94,7 +92,7 @@ export default class ListPostComponent extends Component {
   _handleLoadMore = () => {
     const page = this.state.page + 1;
     this.setState({loading_more: true});
-    this.loadPosts(page).then(() => {
+    this.loadPosts(page, false).then(() => {
       this.setState({loading_more: false});
     });
   };

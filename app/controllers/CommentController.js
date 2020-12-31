@@ -2,10 +2,10 @@ import * as AppData from '../AppData';
 import TimeUtils from '../utils/TimeUtils';
 
 export default class PostController {
-  static async list(post_id) {
+  static async list(post_id, page) {
     try {
       const response = await fetch(
-        `${AppData.server}/comment/list?post_id=${post_id}`,
+        `${AppData.server}/comment/list?post_id=${post_id}&page=${page}`,
         {method: 'get'},
       );
       let json = await response.json();
@@ -23,7 +23,7 @@ export default class PostController {
   }
   static async add(screen) {
     try {
-      screen.setState({message: false});
+      screen.setState({message: false, commentable: false});
       const session_id = (await AppData.getUserData()).session_id;
       const data = {};
       data.session_id = session_id;
@@ -41,9 +41,13 @@ export default class PostController {
       const json = await response.json();
       console.log(json);
       if (json.status) {
-        screen.setState({error: false, new_comment: ''});
+        screen.setState({error: false, commentable: true, new_comment: ''});
       } else {
-        screen.setState({error: true, message: json.message});
+        screen.setState({
+          error: true,
+          commentable: true,
+          message: json.message,
+        });
       }
     } catch (exception) {
       console.log(exception);

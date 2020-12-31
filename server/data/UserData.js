@@ -2,6 +2,8 @@ const Neo4j = require('./Neo4j');
 const sharp = require('sharp');
 const fs = require('fs');
 
+const NotificationService = require('./NotificationService');
+
 module.exports = class UserData {
 	static async getByUserID(user_id) {
 		if (!user_id) return null;
@@ -26,8 +28,8 @@ module.exports = class UserData {
 	static async verify_admin(session_id) {
 		if (!session_id) return false;
 
-		const result = await Neo4j.run(`MATCH (u:User)-[:HAS_SESSION]->(s:Session {session_id: $sessionParam}) 
-			WHERE u.role = 1 RETURN u.user_id LIMIT 1`, { sessionParam: session_id });
+		const result = await Neo4j.run(`MATCH (u:User {role: 1})-[:HAS_SESSION]->(s:Session {session_id: $sessionParam}) 
+			RETURN u.user_id LIMIT 1`, { sessionParam: session_id });
 		return result.records[0]?.get('u.user_id');
 	}
 
@@ -174,6 +176,8 @@ module.exports = class UserData {
 				OPTIONAL MATCH (u)<-[f1:FRIENDS]-(f) MERGE (u)-[:FRIENDS]->(f) RETURN f1`,
 			{ userParam: user_id, friendParam: friend_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'User Friend failed!';
+
+			NotificationService.from_friend(user_id, friend_id);
 
 			const f1 = result.records[0]?.get('f1') ? true : false;
 			return { status: true, f1: f1, f2: true };

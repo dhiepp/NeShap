@@ -67,7 +67,6 @@ export default class UserController {
             routes: [
               {
                 name: 'HomeTabs',
-                params: {screen: 'Account'},
               },
             ],
           }),

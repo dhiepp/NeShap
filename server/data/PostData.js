@@ -3,6 +3,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 
 const UserData = require('./UserData');
+const NotificationService = require('./NotificationService');
 
 module.exports = class PostData {
 	static async getByPostID(post_id) {
@@ -266,6 +267,8 @@ module.exports = class PostData {
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (p:Post {post_id: $postParam}) 
 				MERGE (u)-[r:LIKES]->(p) ON CREATE SET p.likes = p.likes + 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'Post like failed!';
+
+			NotificationService.from_post(user_id, post_id, 'like');
 
 			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
 			return { status: true, likes: likes };

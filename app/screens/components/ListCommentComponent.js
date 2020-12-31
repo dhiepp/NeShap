@@ -23,13 +23,18 @@ import CommentController from '../../controllers/CommentController';
 
 class ListCommentComponent extends Component {
   state = {
+    comments: [],
     loading: true,
+    loading_more: false,
+    no_more: false,
     error: false,
     message: false,
     selected_comment: false,
+    commentable: true,
   };
   async componentDidMount() {
-    await this.updateComments();
+    const page = this.props.page ? this.props.page : 1;
+    await this.loadComments(page, false);
     this.setState({loading: false});
   }
   render() {
@@ -37,7 +42,7 @@ class ListCommentComponent extends Component {
       return <ActivityIndicator size="large" style={styles.full} />;
     }
     if (this.props.refresh) {
-      this.updateComments();
+      this.loadComments(1, true);
     }
     return (
       <View>
@@ -52,17 +57,19 @@ class ListCommentComponent extends Component {
               onChangeText={(text) => this._handleCommentInput(text)}
               onSubmitEditing={this._handleAddComment}
             />
-            <IconButton
-              icon="send"
-              color={this.props.theme.colors.primary}
-              style={styles.new_comment_button}
-              onPress={this._handleAddComment}
-            />
+            {this.state.commentable && (
+              <IconButton
+                icon="send"
+                color={this.props.theme.colors.primary}
+                style={styles.new_comment_button}
+                onPress={this._handleAddComment}
+              />
+            )}
           </View>
-          {this.state.comments.map((comment) => (
+          {this.state.comments.map((comment, index) => (
             <TouchableRipple
               borderless
-              key={comment.comment_id}
+              key={index}
               onPress={() => null}
               onLongPress={() => this._handleCommentAction(comment)}
               style={styles.comment_box}>
@@ -92,6 +99,18 @@ class ListCommentComponent extends Component {
             </TouchableRipple>
           ))}
         </Card>
+        {this.state.no_more && this.state.page === 1 && (
+          <Subheading style={styles.title}>Không có bình luận nào</Subheading>
+        )}
+        {!this.state.no_more && (
+          <Button
+            loading={this.state.loading_more}
+            disabled={this.state.no_more}
+            style={styles.more}
+            onPress={this._handleLoadMore}>
+            Xem thêm
+          </Button>
+        )}
         <Portal>
           <Dialog
             visible={this.state.selected_comment}
@@ -109,8 +128,9 @@ class ListCommentComponent extends Component {
       </View>
     );
   }
-  async updateComments() {
-    let comments = await CommentController.list(this.props.post_id);
+  async loadComments(page, refresh) {
+    let current_comments = refresh ? [] : this.state.comments;
+    let comments = await CommentController.list(this.props.post_id, page);
     comments = await Promise.all(
       comments.map(async (comment) => {
         const perm = await UserController.checkPerm(comment.author.user_id);
@@ -119,17 +139,32 @@ class ListCommentComponent extends Component {
       }),
     );
     this.props.onFinishRefresh();
-    this.setState({comments: comments});
+    const no_more = !comments.length;
+    this.setState({
+      comments: current_comments.concat(comments),
+      page: page,
+      no_more: no_more,
+    });
   }
+  _handleLoadMore = () => {
+    const page = this.state.page + 1;
+    this.setState({loading_more: true});
+    this.loadComments(page, false).then(() => {
+      this.setState({loading_more: false});
+    });
+  };
   _handleCommentInput = (text) => {
     this.setState({new_comment: text});
   };
   _handleAddComment = () => {
+    if (!this.state.commentable) {
+      return;
+    }
     Keyboard.dismiss();
     CommentController.add(this).then(() => {
       this._handleMessage();
       if (!this.state.error) {
-        this.updateComments();
+        this.loadComments(1, true);
       }
     });
   };
@@ -221,5 +256,8 @@ const styles = StyleSheet.create({
   },
   comment_content: {
     margin: 10,
+  },
+  more: {
+    marginBottom: 10,
   },
 });

@@ -6,7 +6,6 @@ import {
   Avatar,
   Button,
   Colors,
-  TouchableRipple,
   Headline,
   Portal,
   Dialog,
@@ -37,53 +36,30 @@ export default class ListUserScreen extends Component {
     return (
       <View style={styles.full}>
         <ScrollView>
-          {this.state.users.map((user) => {
+          {this.state.users.map((user, index) => {
             return (
-              <Card style={styles.box} key={user.user_id}>
-                <TouchableRipple
-                  borderles
-                  onPress={() => this._handleViewUser(user.user_id)}>
-                  <Card.Title
-                    title={user.name}
-                    subtitle={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
-                    left={(props) => (
-                      <Avatar.Image
-                        size={props.size}
-                        source={{uri: user.avatar}}
-                        style={styles.avatar}
-                      />
-                    )}
-                    right={() => (
-                      <Button
-                        icon="delete"
-                        color={Colors.redA200}
-                        onPress={() => this._showDialog(user.user_id)}>
-                        Xóa
-                      </Button>
-                    )}
-                  />
-                </TouchableRipple>
-                {/* <List.Item
+              <Card
+                style={styles.box}
+                key={index}
+                onPress={() => this._handleViewUser(user.user_id)}>
+                <Card.Title
                   title={user.name}
-                  description={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
+                  subtitle={user.role > 0 ? 'Quản trị viên' : 'Người dùng'}
                   left={(props) => (
                     <Avatar.Image
-                      {...props}
-                      size={64}
+                      size={props.size}
                       source={{uri: user.avatar}}
                     />
                   )}
-                  right={(props) => (
+                  right={() => (
                     <Button
-                      {...props}
                       icon="delete"
                       color={Colors.redA200}
                       onPress={() => this._showDialog(user.user_id)}>
                       Xóa
                     </Button>
                   )}
-                  onPress={() => this._handleViewUser(user.user_id)}
-                /> */}
+                />
               </Card>
             );
           })}

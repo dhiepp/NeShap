@@ -1,6 +1,7 @@
 const Neo4j = require('./Neo4j');
 
 const UserData = require('./UserData');
+const NotificationService = require('./NotificationService');
 
 module.exports = class CommentData {
 	static async check(user_id, comment_id) {
@@ -18,18 +19,21 @@ module.exports = class CommentData {
 	static async list(query) {
 		try {
 			const post_id = query.post_id;
+			const page = query.page;
 
 			if (!post_id) return [];
 
+			const skip = Neo4j.int((page - 1) * 10);
+			const limit = Neo4j.int(10);
 			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam})-[:HAS_COMMENT]-(c:Comment)
-				OPTIONAL MATCH (a:User)-[:WRITES_COMMENT]->(c) RETURN c, a ORDER BY c.time DESC`,
-			{ postParam: post_id });
+				OPTIONAL MATCH (a:User)-[:WRITES_COMMENT]->(c) RETURN c, a ORDER BY c.time DESC SKIP $skip LIMIT $limit`,
+			{ postParam: post_id, skip: skip, limit: limit });
 			const records = result.records;
 
 			const comments = records.map(record => {
 				const comment = record.get('c')?.properties;
 				const author = record.get('a')?.properties;
-				comment.author = author ? { user_id : author.user_id, name: author.name } : null;
+				comment.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
 				comment.time = comment.time.toString();
 				return comment;
 			});
@@ -62,6 +66,7 @@ module.exports = class CommentData {
 			const comment_id = result.records[0]?.get('c.comment_id');
 			if (!comment_id) throw 'Comment Write failed';
 
+			NotificationService.from_post(user_id, post_id, 'comment');
 			return { status: true, comment_id: comment_id };
 		}
 		catch (exception) {
