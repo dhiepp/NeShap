@@ -8,7 +8,7 @@ const NotificationService = require('./NotificationService');
 module.exports = class PostData {
 	static async getByPostID(post_id) {
 		if (!post_id) return null;
-		const result = await Neo4j.run('MATCH (u:User)-[:WRITES_POST]->(p:Post {post_id: $postParam}) RETURN p LIMIT 1',
+		const result = await Neo4j.run('MATCH (p:Post {post_id: $postParam}) RETURN p LIMIT 1',
 			{ postParam: post_id });
 		return result.records[0]?.get('p')?.properties;
 	}
@@ -58,7 +58,7 @@ module.exports = class PostData {
 
 			if (cover) {
 				await sharp(cover)
-					.resize({ width: 1280, height: 720, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+					.resize({ width: 1600, height: 900, fit: 'contain', position: 'center', background: '#ffffff' })
 					.jpeg({ quality: 50, force: true }).toFile(`./images/cover/${post_id}.jpg`);
 			}
 
@@ -105,7 +105,7 @@ module.exports = class PostData {
 
 			if (cover) {
 				await sharp(cover)
-					.resize({ width: 1280, height: 720, fit: 'contain', position: 'center', background: '#ffffff', withoutEnlargement: true })
+					.resize({ width: 1600, height: 900, fit: 'contain', position: 'center', background: '#ffffff' })
 					.jpeg({ quality: 50, force: true }).toFile(`./images/cover/${post_id}.jpg`);
 			}
 

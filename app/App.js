@@ -13,6 +13,7 @@ import ViewPostScreen from './screens/ViewPostScreen';
 import EditPostScreen from './screens/EditPostScreen';
 import ViewTagScreen from './screens/ViewTagScreen';
 import ListUserScreen from './screens/ListUserScreen';
+import ManageUserScreen from './screens/ManageUserScreen';
 
 const Stack = createStackNavigator();
 
@@ -48,7 +49,12 @@ export default function App() {
         <Stack.Screen
           name="ListUser"
           component={ListUserScreen}
-          options={{title: 'Danh sách tài khoản'}}
+          options={{title: 'Danh sách người dùng'}}
+        />
+        <Stack.Screen
+          name="ManageUser"
+          component={ManageUserScreen}
+          options={{title: 'Quản lý người dùng'}}
         />
         <Stack.Screen
           name="EditUser"

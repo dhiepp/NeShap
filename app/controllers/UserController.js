@@ -120,27 +120,37 @@ export default class UserController {
   }
 
   static async logout(screen) {
-    const check = await AppData.removeUserData();
-    if (check) {
-      screen.props.navigation.dispatch(
-        CommonActions.reset({
-          index: 1,
-          routes: [
-            {
-              name: 'Login',
-            },
-          ],
-        }),
+    try {
+      const session_id = (await AppData.getUserData()).session_id;
+      const response = await fetch(
+        `${AppData.server}/user/logout?session_id=${session_id}`,
+        {method: 'post'},
       );
+
+      const json = await response.json();
+      if (json.status) {
+        const check = await AppData.removeUserData();
+        if (check) {
+          screen.props.navigation.dispatch(
+            CommonActions.reset({
+              index: 1,
+              routes: [
+                {
+                  name: 'Login',
+                },
+              ],
+            }),
+          );
+        }
+      }
+    } catch (exception) {
+      console.log(exception);
     }
   }
 
   static async profile(user_id) {
     try {
       const viewer_id = (await AppData.getUserData()).user_id;
-      if (!user_id) {
-        user_id = viewer_id;
-      }
       const response = await fetch(
         `${AppData.server}/user/profile?user_id=${user_id}&viewer_id=${viewer_id}`,
         {method: 'get'},
@@ -155,17 +165,46 @@ export default class UserController {
     }
   }
 
-  static async search(name) {
+  static async search(user_id, user_name) {
     try {
-      const response = await fetch(
-        `${AppData.server}/user/search?name=${name}`,
-        {method: 'get'},
-      );
+      let key;
+      if (user_id) {
+        key = `user_id=${user_id}`;
+      } else if (user_name) {
+        key = `user_name=${user_name}`;
+      }
+      const response = await fetch(`${AppData.server}/user/search?${key}`, {
+        method: 'get',
+      });
+
       let json = await response.json();
       if (json) {
         // eslint-disable-next-line prettier/prettier
         json.avatar = `${AppData.server}/user/avatar?user_id=${json.user_id}&t=${Date.now()}`;
       }
+      return json;
+    } catch (exception) {
+      console.log(exception);
+      return null;
+    }
+  }
+
+  static async list(mode, page) {
+    try {
+      const user_data = await AppData.getUserData();
+      const session_id = user_data.session_id;
+      const user_id = user_data.user_id;
+
+      const response = await fetch(
+        `${AppData.server}/user/list?session_id=${session_id}&mode=${mode}&page=${page}&user_id=${user_id}`,
+        {method: 'get'},
+      );
+      let json = await response.json();
+      json = json.map((user) => {
+        // eslint-disable-next-line prettier/prettier
+        user.avatar = `${AppData.server}/user/avatar?user_id=${user.user_id}&t=${Date.now()}`;
+        return user;
+      });
       return json;
     } catch (exception) {
       console.log(exception);
@@ -247,32 +286,14 @@ export default class UserController {
     }
   }
 
-  static async list(page) {
-    try {
-      const session_id = (await AppData.getUserData()).session_id;
-      const response = await fetch(
-        `${AppData.server}/user/list?session_id=${session_id}&page=${page}`,
-        {method: 'get'},
-      );
-      let json = await response.json();
-      json = json.map((user) => {
-        // eslint-disable-next-line prettier/prettier
-        user.avatar = `${AppData.server}/user/avatar?user_id=${user.user_id}&t=${Date.now()}`;
-        return user;
-      });
-      return json;
-    } catch (exception) {
-      console.log(exception);
-    }
-  }
-
   static async delete(screen) {
     try {
       const session_id = (await AppData.getUserData()).session_id;
       const delete_id = screen.state.delete;
+      const hard = screen.state.hard ? '&hard=true' : '';
 
       const response = await fetch(
-        `${AppData.server}/user/delete?session_id=${session_id}&delete_id=${delete_id}`,
+        `${AppData.server}/user/delete?session_id=${session_id}&delete_id=${delete_id}${hard}`,
         {method: 'post'},
       );
       let json = await response.json();

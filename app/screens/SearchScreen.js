@@ -105,7 +105,7 @@ class SearchScreen extends Component {
     let user;
     if (keyword.match(/^[0-9a-zA-Z,]{3,20}$/)) {
       tag = keyword;
-      user = await UserController.search(keyword);
+      user = await UserController.search(null, keyword);
     }
     this.setState({refresh: true, message: false, tag: tag, user: user});
   };

@@ -10,9 +10,9 @@ import {
   Chip,
   Portal,
   Dialog,
-  Paragraph,
   Snackbar,
   Colors,
+  Subheading,
 } from 'react-native-paper';
 import ImagePicker from 'react-native-image-picker';
 import PostController from '../controllers/PostController';
@@ -131,7 +131,7 @@ export default class EditPostScreen extends Component {
           <Dialog visible={this.state.delete} onDismiss={this._hideDialog}>
             <Dialog.Title>Bài viết</Dialog.Title>
             <Dialog.Content>
-              <Paragraph>Bạn có muốn xóa bài viết này?</Paragraph>
+              <Subheading>Bạn có muốn xóa bài viết này?</Subheading>
             </Dialog.Content>
             <Dialog.Actions>
               <Button onPress={this._handleDeletePost}>Có</Button>

@@ -145,11 +145,8 @@ export default class PostController {
 
   static async list(mode, page, user_id, keyword) {
     try {
-      if (user_id == null) {
-        user_id = (await AppData.getUserData()).user_id;
-      }
       const response = await fetch(
-        `${AppData.server}/post/list?mode=${mode}&user_id=${user_id}&page=${page}&key=${keyword}`,
+        `${AppData.server}/post/list?mode=${mode}&page=${page}&user_id=${user_id}&key=${keyword}`,
         {
           method: 'get',
         },

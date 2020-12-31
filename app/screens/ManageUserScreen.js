@@ -5,22 +5,30 @@ import {
   Card,
   Avatar,
   Button,
+  Colors,
   Headline,
+  Portal,
+  Dialog,
+  Text,
   Snackbar,
+  Checkbox,
+  Subheading,
 } from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
 
-export default class ListUserScreen extends Component {
+export default class ManageUserScreen extends Component {
   state = {
     loading: true,
     loading_more: false,
     no_more: false,
+    delete: false,
+    message: false,
     users: [],
     page: 1,
   };
   async componentDidMount() {
-    await this.loadUsers(1, false);
+    await this.loadUsers(1);
     this.setState({loading: false});
   }
   render() {
@@ -51,6 +59,14 @@ export default class ListUserScreen extends Component {
                       source={{uri: user.avatar}}
                     />
                   )}
+                  right={() => (
+                    <Button
+                      icon="delete"
+                      color={Colors.redA200}
+                      onPress={() => this._showDialog(user.user_id)}>
+                      Xóa
+                    </Button>
+                  )}
                 />
               </Card>
             );
@@ -68,6 +84,27 @@ export default class ListUserScreen extends Component {
             </Button>
           )}
         </ScrollView>
+        <Portal>
+          <Dialog visible={this.state.delete} onDismiss={this._hideDialog}>
+            <Dialog.Title>Tài khoản</Dialog.Title>
+            <Dialog.Content>
+              <Subheading>Bạn có muốn xóa tài khoản này?</Subheading>
+              <View style={styles.inline}>
+                <Checkbox
+                  status={this.state.hard ? 'checked' : 'unchecked'}
+                  onPress={() => this.setState({hard: !this.state.hard})}
+                />
+                <Text onPress={() => this.setState({hard: !this.state.hard})}>
+                  Xóa tất cả bài viết và bình luận
+                </Text>
+              </View>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={this._handleDeleteUser}>Có</Button>
+              <Button onPress={this._hideDialog}>Không</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
         <Snackbar
           visible={this.state.message}
           onDismiss={() => this.setState({message: false})}
@@ -81,9 +118,21 @@ export default class ListUserScreen extends Component {
     );
   }
   async loadUsers(page, refresh) {
-    const mode = this.props.route.params?.mode;
+    if (!refresh) {
+      const user_id = this.props.route.params?.user_id;
+      if (user_id) {
+        let user = await UserController.search(user_id);
+        this.setState({
+          users: [user],
+          page: 0,
+          no_more: true,
+        });
+        return;
+      }
+    }
+
     let current_users = refresh ? [] : this.state.users;
-    let users = await UserController.list(mode, page);
+    let users = await UserController.list('all', page);
     const no_more = !users.length;
     this.setState({
       users: current_users.concat(users),
@@ -94,6 +143,19 @@ export default class ListUserScreen extends Component {
   }
   _handleViewUser = (user_id) => {
     UserController.view(this.props.navigation, user_id);
+  };
+  _showDialog = (user_id) => {
+    this.setState({delete: user_id});
+  };
+  _hideDialog = () => {
+    this.setState({delete: false, hard: false});
+  };
+  _handleDeleteUser = () => {
+    UserController.delete(this).then(() => {
+      let users = this.state.users;
+      users = users.filter((user) => user.user_id !== this.state.delete);
+      this.setState({users: users, delete: false, hard: false});
+    });
   };
   _handleRefresh = () => {
     this.setState({refresh: true});
@@ -123,5 +185,9 @@ const styles = StyleSheet.create({
   },
   more: {
     marginBottom: 10,
+  },
+  inline: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });

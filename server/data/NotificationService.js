@@ -23,9 +23,9 @@ module.exports = class NotificationService {
 	static async from_friend(user_id, friend_id) {
 		try {
 			const content = 'Đã gửi cho bạn lời mời kết bạn.';
-			await Neo4j.run(`MATCH (f:User {user_id: $friendParam}) OPTIONAL MATCH (u:User {user_id: $userParam})
-				CREATE (f)-[:HAS_NOTIFICATION]->(n:Notification {notification_id: randomUUID(), time: datetime(), 
-				read: false, type: 'friend', content: $contentParam})-[:MENTIONS]->(u)`,
+			await Neo4j.run(`MATCH (f:User {user_id: $friendParam}) OPTIONAL MATCH (u:User {user_id: $userParam}) 
+				MERGE (f)-[:HAS_NOTIFICATION]->(n:Notification {type: 'friend'})-[:MENTIONS]->(u) 
+				SET n.notification_id = randomUUID(), n.time = datetime(), n.read = false, n.content = $contentParam`,
 			{ friendParam: friend_id, userParam: user_id, contentParam: content });
 		}
 		catch (error) {

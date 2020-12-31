@@ -10,6 +10,7 @@ import {
   Snackbar,
   Subheading,
   Caption,
+  Colors,
 } from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
@@ -49,7 +50,7 @@ export default class ViewUserScreen extends Component {
               style={styles.avatar}
             />
             <Title style={styles.title}>{this.state.user.name}</Title>
-            {this.state.f1 && (
+            {this.state.status && (
               <Caption style={styles.child}>{this.state.status}</Caption>
             )}
             {(this.state.perm.value === 1 || this.state.perm.value === 3) && (
@@ -58,7 +59,17 @@ export default class ViewUserScreen extends Component {
                 icon={this.state.f2 ? 'account-remove' : 'account-plus'}
                 style={styles.child}
                 onPress={this._handleFriend}>
-                {this.state.f2 ? 'Hủy kết bạn' : 'Kết bạn'}
+                {this.state.action}
+              </Button>
+            )}
+            {this.state.perm.value === 3 && (
+              <Button
+                mode="text"
+                icon="briefcase-account"
+                color={Colors.redA200}
+                style={styles.child}
+                onPress={this._handleMange}>
+                Quản lý người dùng
               </Button>
             )}
           </Card>
@@ -86,6 +97,10 @@ export default class ViewUserScreen extends Component {
   }
   async loadUser() {
     const user_id = this.props.route.params?.user_id;
+    if (!user_id) {
+      this.setState({loading: false, valid: false});
+      return;
+    }
     const data = await UserController.profile(user_id);
     const perm = await UserController.checkPerm(user_id);
     this.setState({
@@ -100,14 +115,23 @@ export default class ViewUserScreen extends Component {
   }
   updateFriendship() {
     let status;
+    let action;
     if (this.state.f1) {
       if (this.state.f2) {
-        status = 'Đã là bạn bè của nhau';
+        action = 'Xóa bạn bè';
       } else {
-        status = 'Đã gửi lời mời đến bạn';
+        status = 'Đã gửi cho bạn lời mời kết bạn';
+        action = 'Chấp nhận';
+      }
+    } else {
+      if (this.state.f2) {
+        status = 'Đã gửi lời mời kết bạn';
+        action = 'Hủy kết bạn';
+      } else {
+        action = 'Thêm bạn bè';
       }
     }
-    this.setState({status: status});
+    this.setState({status: status, action: action});
   }
   _handleRefresh = () => {
     this.setState({refresh: true});
@@ -118,6 +142,11 @@ export default class ViewUserScreen extends Component {
   };
   _handleFriend = () => {
     UserController.friend(this).then(() => this.updateFriendship());
+  };
+  _handleMange = () => {
+    this.props.navigation.push('ManageUser', {
+      user_id: this.state.user.user_id,
+    });
   };
 }
 
@@ -130,7 +159,6 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   title: {
-    flex: 1,
     margin: 10,
     textAlign: 'center',
     textAlignVertical: 'center',

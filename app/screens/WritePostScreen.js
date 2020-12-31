@@ -39,6 +39,7 @@ export default class WritePostScreen extends Component {
                   ? {uri: this.state.cover.uri}
                   : require('./static/default_cover.jpg')
               }
+              resizeMode="contain"
               style={styles.cover}
             />
             <Button
