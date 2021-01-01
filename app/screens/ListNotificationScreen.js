@@ -25,7 +25,6 @@ export default class ListNotificationScreen extends Component {
   };
   async componentDidMount() {
     await this.loadNotifications(1, false);
-    this.setState({loading: false});
   }
   render() {
     if (this.state.loading) {
@@ -93,6 +92,7 @@ export default class ListNotificationScreen extends Component {
     let notifications = await NotificationController.list(page);
     const no_more = !notifications.length;
     this.setState({
+      loading: false,
       refresh: false,
       notifications: current_notifications.concat(notifications),
       page: page,

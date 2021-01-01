@@ -80,6 +80,7 @@ export default class EditPostScreen extends Component {
               label="Nội dung"
               mode="outlined"
               multiline={true}
+              maxLength={5000}
               defaultValue={this.state.new_content}
               style={styles.child}
               onChangeText={(text) => this.setState({new_content: text})}

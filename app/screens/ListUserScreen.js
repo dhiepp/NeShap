@@ -21,7 +21,6 @@ export default class ListUserScreen extends Component {
   };
   async componentDidMount() {
     await this.loadUsers(1, false);
-    this.setState({loading: false});
   }
   render() {
     if (this.state.loading) {
@@ -86,9 +85,10 @@ export default class ListUserScreen extends Component {
     let users = await UserController.list(mode, page);
     const no_more = !users.length;
     this.setState({
+      loading: false,
+      refresh: false,
       users: current_users.concat(users),
       page: page,
-      refresh: false,
       no_more: no_more,
     });
   }

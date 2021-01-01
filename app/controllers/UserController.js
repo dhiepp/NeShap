@@ -48,6 +48,7 @@ export default class UserController {
         screen.state.password,
       );
 
+      console.log(password);
       const response = await fetch(
         `${AppData.server}/user/login?name=${name}&password=${password}`,
         {method: 'post'},
@@ -200,9 +201,10 @@ export default class UserController {
         {method: 'get'},
       );
       let json = await response.json();
+
+      const time = Date.now();
       json = json.map((user) => {
-        // eslint-disable-next-line prettier/prettier
-        user.avatar = `${AppData.server}/user/avatar?user_id=${user.user_id}&t=${Date.now()}`;
+        user.avatar = `${AppData.server}/user/avatar?user_id=${user.user_id}&t=${time}`;
         return user;
       });
       return json;

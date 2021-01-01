@@ -14,6 +14,7 @@ import EditPostScreen from './screens/EditPostScreen';
 import ViewTagScreen from './screens/ViewTagScreen';
 import ListUserScreen from './screens/ListUserScreen';
 import ManageUserScreen from './screens/ManageUserScreen';
+import ViewChatScreen from './screens/ViewChatScreen';
 
 const Stack = createStackNavigator();
 
@@ -80,6 +81,11 @@ export default function App() {
           name="ViewTag"
           component={ViewTagScreen}
           options={{title: 'Xem tag'}}
+        />
+        <Stack.Screen
+          name="ViewChat"
+          component={ViewChatScreen}
+          options={{title: 'Nhắn tin'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

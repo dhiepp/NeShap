@@ -8,11 +8,11 @@ module.exports = class NotificationData {
 			const session_id = query.session_id;
 
 			const user_id = await UserData.verify(session_id);
-			if (!user_id) throw 'Failed to get Badge: Invalid session';
+			if (!user_id) return { notifications: 0, chats: 0 };
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) 
 				OPTIONAL MATCH (u)-[:HAS_NOTIFICATION]->(n:Notification) WHERE n.read = false
-				OPTIONAL MATCH (u)-[c:IS_IN]-(:Chat) WHERE c.read = false
+				OPTIONAL MATCH (u)<-[c:HAS_MEMBER]-(:Chat) WHERE c.read = false
 				RETURN count(n) as nc, count(c) as cc`, { userParam: user_id });
 			const record = result.records[0];
 
@@ -48,7 +48,7 @@ module.exports = class NotificationData {
 				const notification = record.get('n')?.properties;
 				const mention = record.get('m')?.properties;
 				const post = record.get('p')?.properties;
-				notification.mention = mention ? { user_id : mention.user_id, name: mention.name } : null;
+				notification.mention = mention ? { user_id: mention.user_id, name: mention.name } : { name: '[đã xóa]' };
 				notification.link = post?.post_id;
 				notification.time = notification.time.toString();
 				return notification;
@@ -66,12 +66,13 @@ module.exports = class NotificationData {
 			const session_id = query.session_id;
 			const notification_id = query.notification_id;
 
-			if (!notification_id) return;
+			if (!notification_id) return { status: false };
 			const user_id = await UserData.verify(session_id);
-			if (!user_id) throw 'Notification Read failed: Invalid session';
+			if (!user_id) return { status: false };
 
-			const result = await Neo4j.run('MATCH (n:Notification {notification_id: $notificationParam}) SET n.read = true',
-				{ notificationParam: notification_id });
+			const result = await Neo4j.run(`MATCH (:User {user_id: $userParam})-[:HAS_NOTIFICATION]->
+				(:Notification {notification_id: $notificationParam}) SET n.read = true`,
+			{ userParam: user_id, notificationParam: notification_id });
 			if (result.summary.counters.updates().propertiesSet == 0) throw 'Notification Read failed';
 			return { status: true };
 		}

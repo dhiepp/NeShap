@@ -63,6 +63,7 @@ export default class WritePostScreen extends Component {
               label="Nội dung"
               mode="outlined"
               multiline={true}
+              maxLength={5000}
               style={styles.child}
               onChangeText={(text) => this.setState({content: text})}
             />

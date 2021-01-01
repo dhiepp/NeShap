@@ -20,8 +20,8 @@ module.exports = class PostData {
 			OPTIONAL MATCH (u)-[r:WRITES_POST]->(p:Post {post_id: $postParam}) 
 			RETURN u.role, r LIMIT 1`, { userParam: user_id, postParam: post_id });
 		const record = result.records[0];
-		if (record.get('u.role') > 0) return true;
-		if (record.get('r')) return true;
+		if (record?.get('u.role') > 0) return true;
+		if (record?.get('r')) return true;
 		return false;
 	}
 
@@ -237,7 +237,7 @@ module.exports = class PostData {
 				RETURN p, a, v`,
 			{ postParam: post_id, viewerParam: viewer_id });
 			const record = result.records[0];
-			if (!record) throw 'Post not found';
+			if (!record) return null;
 
 			const post = record.get('p')?.properties;
 			const author = record.get('a')?.properties;
@@ -268,9 +268,9 @@ module.exports = class PostData {
 				MERGE (u)-[r:LIKES]->(p) ON CREATE SET p.likes = p.likes + 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'Post like failed!';
 
-			NotificationService.from_post(user_id, post_id, 'like');
-
 			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
+			NotificationService.from_post(user_id, post_id, 'like', likes);
+
 			return { status: true, likes: likes };
 		}
 		catch (exception) {

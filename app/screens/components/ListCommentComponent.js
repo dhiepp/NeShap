@@ -30,7 +30,7 @@ class ListCommentComponent extends Component {
     error: false,
     message: false,
     selected_comment: false,
-    commentable: true,
+    sendable: true,
   };
   async componentDidMount() {
     const page = this.props.page ? this.props.page : 1;
@@ -50,6 +50,9 @@ class ListCommentComponent extends Component {
           <Title style={styles.title}>Bình luận</Title>
           <View style={styles.new_comment_box}>
             <TextInput
+              dense
+              multiline
+              maxLength={500}
               label="Thêm bình luận"
               mode="outlined"
               value={this.state.new_comment}
@@ -57,7 +60,7 @@ class ListCommentComponent extends Component {
               onChangeText={(text) => this._handleCommentInput(text)}
               onSubmitEditing={this._handleAddComment}
             />
-            {this.state.commentable && (
+            {this.state.sendable && (
               <IconButton
                 icon="send"
                 color={this.props.theme.colors.primary}
@@ -67,36 +70,41 @@ class ListCommentComponent extends Component {
             )}
           </View>
           {this.state.comments.map((comment, index) => (
-            <TouchableRipple
-              borderless
-              key={index}
-              onPress={() => null}
-              onLongPress={() => this._handleCommentAction(comment)}
-              style={styles.comment_box}>
-              <View>
-                <View style={styles.info_box}>
-                  <TouchableRipple
-                    borderles
-                    onPress={() =>
-                      this._handleViewUser(comment.author.user_id)
-                    }>
-                    <View style={styles.comment_author}>
-                      <Avatar.Image
-                        size={32}
-                        source={{uri: comment.author.avatar}}
-                      />
+            <View style={styles.comment_area} key={index}>
+              <View style={styles.author_box}>
+                <TouchableRipple
+                  borderless
+                  onPress={() => this._handleViewUser(comment.author.user_id)}>
+                  <Avatar.Image
+                    size={32}
+                    source={{uri: comment.author.avatar}}
+                  />
+                </TouchableRipple>
+              </View>
+              <TouchableRipple
+                borderless
+                onPress={() => null}
+                onLongPress={() => this._handleCommentAction(comment)}
+                style={styles.comment_box}>
+                <View>
+                  <View style={styles.info_box}>
+                    <TouchableRipple
+                      borderless
+                      onPress={() =>
+                        this._handleViewUser(comment.author.user_id)
+                      }>
                       <Subheading style={styles.comment_username}>
                         {comment.author.name}
                       </Subheading>
-                    </View>
-                  </TouchableRipple>
-                  <Caption>{comment.time}</Caption>
+                    </TouchableRipple>
+                    <Caption>{comment.time}</Caption>
+                  </View>
+                  <Paragraph style={styles.comment_content}>
+                    {comment.content}
+                  </Paragraph>
                 </View>
-                <Paragraph style={styles.comment_content}>
-                  {comment.content}
-                </Paragraph>
-              </View>
-            </TouchableRipple>
+              </TouchableRipple>
+            </View>
           ))}
         </Card>
         {this.state.no_more && this.state.page === 1 && (
@@ -157,7 +165,7 @@ class ListCommentComponent extends Component {
     this.setState({new_comment: text});
   };
   _handleAddComment = () => {
-    if (!this.state.commentable) {
+    if (!this.state.sendable) {
       return;
     }
     Keyboard.dismiss();
@@ -215,10 +223,6 @@ const styles = StyleSheet.create({
     margin: 10,
     textAlign: 'center',
   },
-  child: {
-    margin: 5,
-    textAlign: 'center',
-  },
   new_comment_box: {
     flex: 1,
     flexDirection: 'row',
@@ -232,11 +236,19 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 5,
   },
-  comment_box: {
-    flexDirection: 'column',
-    borderRadius: 20,
-    padding: 10,
+  comment_area: {
+    flexDirection: 'row',
     margin: 5,
+  },
+  author_box: {
+    flex: 1,
+    padding: 5,
+    paddingLeft: 0,
+  },
+  comment_box: {
+    flex: 9,
+    borderRadius: 10,
+    padding: 10,
     backgroundColor: Colors.grey200,
   },
   info_box: {
@@ -246,13 +258,8 @@ const styles = StyleSheet.create({
     paddingLeft: 10,
     paddingRight: 10,
   },
-  comment_author: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
   comment_username: {
     fontWeight: 'bold',
-    marginLeft: 10,
   },
   comment_content: {
     margin: 10,

@@ -11,8 +11,8 @@ module.exports = class CommentData {
 			OPTIONAL MATCH (u)-[r:WRITES_COMMENT]->(c:Comment {comment_id: $commentParam}) 
 			RETURN u.role, r LIMIT 1`, { userParam: user_id, commentParam: comment_id });
 		const record = result.records[0];
-		if (record.get('u.role') > 0) return true;
-		if (record.get('r')) return true;
+		if (record?.get('u.role') > 0) return true;
+		if (record?.get('r')) return true;
 		return false;
 	}
 
@@ -61,13 +61,15 @@ module.exports = class CommentData {
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (p:Post {post_id: $postParam})
 				CREATE (u)-[:WRITES_COMMENT]->(c:Comment {comment_id: randomUUID(), content: $contentParam, time: datetime()})
-				<-[:HAS_COMMENT]-(p) SET p.comments = p.comments + 1 RETURN c.comment_id`,
+				<-[:HAS_COMMENT]-(p) SET p.comments = p.comments + 1 RETURN c.comment_id, p.comments`,
 			{ userParam: user_id, postParam: post_id, contentParam: content });
 			const comment_id = result.records[0]?.get('c.comment_id');
 			if (!comment_id) throw 'Comment Write failed';
 
-			NotificationService.from_post(user_id, post_id, 'comment');
-			return { status: true, comment_id: comment_id };
+			const comments = result.records[0]?.get('p.comments');
+			NotificationService.from_post(user_id, post_id, 'comment', comments);
+
+			return { status: true, comment_id: comment_id, comments: comments };
 		}
 		catch (exception) {
 			console.log(exception);

@@ -12,6 +12,7 @@ import {
   Caption,
   Colors,
 } from 'react-native-paper';
+import ChatControlelr from '../controllers/ChatController';
 
 import UserController from '../controllers/UserController';
 import ListPostComponent from './components/ListPostComponent';
@@ -53,15 +54,26 @@ export default class ViewUserScreen extends Component {
             {this.state.status && (
               <Caption style={styles.child}>{this.state.status}</Caption>
             )}
-            {(this.state.perm.value === 1 || this.state.perm.value === 3) && (
-              <Button
-                mode={this.state.f2 ? 'text' : 'contained'}
-                icon={this.state.f2 ? 'account-remove' : 'account-plus'}
-                style={styles.child}
-                onPress={this._handleFriend}>
-                {this.state.action}
-              </Button>
-            )}
+            <View style={styles.inline}>
+              {this.state.f1 && this.state.f2 && (
+                <Button
+                  mode="contained"
+                  icon="chat-plus"
+                  style={styles.child}
+                  onPress={this._handleChat}>
+                  Nhắn tin
+                </Button>
+              )}
+              {(this.state.perm.value === 1 || this.state.perm.value === 3) && (
+                <Button
+                  mode={this.state.f2 ? 'text' : 'contained'}
+                  icon={this.state.f2 ? 'account-remove' : 'account-plus'}
+                  style={styles.child}
+                  onPress={this._handleFriend}>
+                  {this.state.action}
+                </Button>
+              )}
+            </View>
             {this.state.perm.value === 3 && (
               <Button
                 mode="text"
@@ -143,6 +155,9 @@ export default class ViewUserScreen extends Component {
   _handleFriend = () => {
     UserController.friend(this).then(() => this.updateFriendship());
   };
+  _handleChat = () => {
+    ChatControlelr.start(this);
+  };
   _handleMange = () => {
     this.props.navigation.push('ManageUser', {
       user_id: this.state.user.user_id,
@@ -163,7 +178,11 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     textAlignVertical: 'center',
   },
+  inline: {
+    flexDirection: 'row',
+  },
   child: {
+    flex: 1,
     margin: 5,
     textAlign: 'center',
   },

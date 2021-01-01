@@ -31,8 +31,8 @@ export default class ViewPostScreen extends Component {
     refresh: false,
     message: false,
   };
-  componentDidMount() {
-    this.loadPost();
+  async componentDidMount() {
+    await this.loadPost();
   }
   render() {
     if (this.state.loading) {
@@ -133,7 +133,7 @@ export default class ViewPostScreen extends Component {
   }
 
   async loadPost() {
-    const post = await PostController.detail(this.props.route.params.post_id);
+    const post = await PostController.detail(this.props.route.params?.post_id);
     if (!post) {
       this.setState({loading: false, valid: false});
       return;

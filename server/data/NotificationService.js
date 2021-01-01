@@ -2,12 +2,12 @@ const Neo4j = require('./Neo4j');
 
 // Just funny name because Nodejs is dumb
 module.exports = class NotificationService {
-	static async from_post(user_id, post_id, type) {
+	static async from_post(user_id, post_id, type, amount) {
 		try {
 			let content = 'Đã tương tác với bài viết của bạn.';
 			switch (type) {
-			case 'like': content = 'Đã thích bài viết của bạn.'; break;
-			case 'comment': content = 'Đã bình luận về bài viết của bạn.'; break;
+			case 'like': content = `Và ${amount} người khác đã thích bài viết của bạn.`; break;
+			case 'comment': content = `Đã bình luận về bài viết của bạn (và ${amount} bình luận nữa).`; break;
 			}
 			await Neo4j.run(`MATCH (a:User)-[:WRITES_POST]->(p:Post {post_id: $postParam}) WHERE NOT a.user_id = $userParam 
 				MERGE (a)-[:HAS_NOTIFICATION]->(n:Notification {type: $typeParam})-[:LINKS_TO]->(p) 

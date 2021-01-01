@@ -29,7 +29,6 @@ export default class ManageUserScreen extends Component {
   };
   async componentDidMount() {
     await this.loadUsers(1);
-    this.setState({loading: false});
   }
   render() {
     if (this.state.loading) {
@@ -123,6 +122,7 @@ export default class ManageUserScreen extends Component {
       if (user_id) {
         let user = await UserController.search(user_id);
         this.setState({
+          loading: false,
           users: [user],
           page: 0,
           no_more: true,

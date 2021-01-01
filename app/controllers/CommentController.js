@@ -1,7 +1,7 @@
 import * as AppData from '../AppData';
 import TimeUtils from '../utils/TimeUtils';
 
-export default class PostController {
+export default class CommentController {
   static async list(post_id, page) {
     try {
       const response = await fetch(
@@ -9,9 +9,10 @@ export default class PostController {
         {method: 'get'},
       );
       let json = await response.json();
+
+      const time = Date.now();
       json = json.map((comment) => {
-        // eslint-disable-next-line prettier/prettier
-        comment.author.avatar = `${AppData.server}/user/avatar?user_id=${comment.author.user_id}&t=${Date.now()}`;
+        comment.author.avatar = `${AppData.server}/user/avatar?user_id=${comment.author.user_id}&t=${time}`;
         comment.time = TimeUtils.translate(comment.time);
         return comment;
       });
@@ -23,7 +24,7 @@ export default class PostController {
   }
   static async add(screen) {
     try {
-      screen.setState({message: false, commentable: false});
+      screen.setState({message: false, sendable: false});
       const session_id = (await AppData.getUserData()).session_id;
       const data = {};
       data.session_id = session_id;
@@ -41,11 +42,12 @@ export default class PostController {
       const json = await response.json();
       console.log(json);
       if (json.status) {
-        screen.setState({error: false, commentable: true, new_comment: ''});
+        screen.setState({error: false, sendable: true, new_comment: ''});
+        return json.comment_id;
       } else {
         screen.setState({
           error: true,
-          commentable: true,
+          sendable: true,
           message: json.message,
         });
       }

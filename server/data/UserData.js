@@ -125,11 +125,12 @@ module.exports = class UserData {
 			const user_id = query.user_id;
 			const viewer_id = query.viewer_id;
 
+			if (!user_id) return null;
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) OPTIONAL MATCH (v:User {user_id: $viewerParam}) 
 				OPTIONAL MATCH (u)-[f1:FRIENDS]->(v) OPTIONAL MATCH (u)<-[f2:FRIENDS]-(v) RETURN u, f1, f2`,
 			{ userParam: user_id, viewerParam: viewer_id });
 			const record = result.records[0];
-			if (!record) throw 'User Profile not found';
+			if (!record) return null;
 
 			const user = record.get('u').properties;
 			const f1 = record.get('f1') ? true : false;
@@ -225,7 +226,7 @@ module.exports = class UserData {
 			switch(mode) {
 			case 'friend': {
 				const user_id = await this.verify(session_id);
-				if (!user_id) throw 'List User failed: Invalid session';
+				if (!user_id) return [];
 
 				const result = await Neo4j.run(`MATCH (:User {user_id: $userParam})-[:FRIENDS]->(u:User) 
 					RETURN u ORDER BY u.name SKIP $skip LIMIT $limit`, { userParam: user_id, skip: skip, limit: limit });
@@ -234,7 +235,7 @@ module.exports = class UserData {
 			}
 			case 'all': {
 				const user_id = await this.verify_admin(session_id);
-				if (!user_id) throw 'List User failed: Invalid session or non admin';
+				if (!user_id) return [];
 
 				const result = await Neo4j.run('MATCH (u:User) RETURN u ORDER BY u.role DESC, u.name SKIP $skip LIMIT $limit',
 					{ skip: skip, limit: limit });
@@ -266,7 +267,9 @@ module.exports = class UserData {
 			if (!user_id) {
 				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
 			}
-			if (user_id == session_id) throw 'User Friend to self!';
+			if (user_id == friend_id) {
+				return { status: false, message: 'Không thể kết bạn với chính mình!' };
+			}
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (f:User {user_id: $friendParam})
 				OPTIONAL MATCH (u)<-[f1:FRIENDS]-(f) MERGE (u)-[:FRIENDS]->(f) RETURN f1`,
@@ -293,7 +296,9 @@ module.exports = class UserData {
 			if (!user_id) {
 				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
 			}
-			if (user_id == session_id) throw 'User Unfriend to self!';
+			if (user_id == session_id) {
+				return { status: false, message: 'Không thể xóa bạn bè với chính mình!' };
+			}
 
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})-[r:FRIENDS]-(f:User {user_id: $friendParam})
 				DELETE r`, { userParam: user_id, friendParam: friend_id });
@@ -303,7 +308,7 @@ module.exports = class UserData {
 		}
 		catch (exception) {
 			console.log(exception);
-			return { status: false, message: 'Không thể hủy kết bạn!' };
+			return { status: false, message: 'Không thể xóa bạn bè!' };
 		}
 	}
 

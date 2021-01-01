@@ -40,9 +40,10 @@ export default class NotificationController {
         {method: 'get'},
       );
       let json = await response.json();
+
+      const time = Date.now();
       json = json.map((notification) => {
-        // eslint-disable-next-line prettier/prettier
-        notification.mention.avatar = `${AppData.server}/user/avatar?user_id=${notification.mention.user_id}&t=${Date.now()}`;
+        notification.mention.avatar = `${AppData.server}/user/avatar?user_id=${notification.mention.user_id}&t=${time}`;
         notification.time = TimeUtils.translate(notification.time);
         notification.icon = this.icon(notification.type);
         return notification;

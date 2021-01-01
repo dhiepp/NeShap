@@ -152,11 +152,11 @@ export default class PostController {
         },
       );
       let json = await response.json();
+
+      const time = Date.now();
       json = json.map((post) => {
-        // eslint-disable-next-line prettier/prettier
-        post.author.avatar = `${AppData.server}/user/avatar?user_id=${post.author.user_id}&t=${Date.now()}`;
-        // eslint-disable-next-line prettier/prettier
-        post.cover = `${AppData.server}/post/cover?post_id=${post.post_id}&t=${Date.now()}`;
+        post.author.avatar = `${AppData.server}/user/avatar?user_id=${post.author.user_id}&t=${time}`;
+        post.cover = `${AppData.server}/post/cover?post_id=${post.post_id}&t=${time}`;
         post.time = TimeUtils.translate(post.time);
         return post;
       });
