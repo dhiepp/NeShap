@@ -27,7 +27,6 @@ class ViewChatScreen extends Component {
     loading_more: false,
     no_more: false,
     error: false,
-    sendable: true,
   };
   async componentDidMount() {
     const page = this.props.page ? this.props.page : 1;
@@ -37,9 +36,23 @@ class ViewChatScreen extends Component {
       return;
     }
 
+    Keyboard.addListener('keyboardDidShow', () => {
+      this.scroll?.scrollToEnd();
+    });
+    this.socket = await MessageController.connect(chat.chat_id);
+    this.socket.on('disconnect', () => {
+      this.setState({error: 'Đã mất kết nối đến server chat!'});
+    });
+    this.socket.on('message', (message) => {
+      this._handleUpdate(message);
+    });
+
     this.props.navigation.setOptions({title: chat.who.name});
     this.setState({chat: chat});
     await this.loadMessages(page, false);
+  }
+  componentWillUnmount() {
+    this.socket.disconnect(true);
   }
   render() {
     if (this.state.loading) {
@@ -80,7 +93,7 @@ class ViewChatScreen extends Component {
               )}
               <TouchableRipple
                 borderless
-                onPress={() => null}
+                onPress={() => this._handleViewUser(message.author.user_id)}
                 style={styles.message_box}>
                 <View>
                   <View style={styles.info_box}>
@@ -116,16 +129,13 @@ class ViewChatScreen extends Component {
               value={this.state.new_message}
               style={styles.new_message_input}
               onChangeText={(text) => this._handleMessageInput(text)}
-              onSubmitEditing={this._handleSendMessage}
             />
-            {this.state.sendable && (
-              <IconButton
-                icon="send"
-                color={this.props.theme.colors.primary}
-                style={styles.new_message_button}
-                onPress={this._handleSendMessage}
-              />
-            )}
+            <IconButton
+              icon="send"
+              color={this.props.theme.colors.primary}
+              style={styles.new_message_button}
+              onPress={this._handleSendMessage}
+            />
           </View>
         </Card>
         <Snackbar
@@ -153,6 +163,11 @@ class ViewChatScreen extends Component {
       no_more: no_more,
     });
   }
+  _handleUpdate = (message) => {
+    let messages = this.state.messages;
+    messages.push(MessageController.update(message));
+    this.setState({messages: messages});
+  };
   _handleLoadMore = () => {
     const page = this.state.page + 1;
     this.setState({loading_more: true});
@@ -164,13 +179,7 @@ class ViewChatScreen extends Component {
     this.setState({new_message: text});
   };
   _handleSendMessage = () => {
-    if (!this.state.sendable) {
-      return;
-    }
-    Keyboard.dismiss();
-    MessageController.send(this).then((message_id) => {
-      this.loadMessages(1, true);
-    });
+    MessageController.send(this);
   };
   _handleViewUser = (user_id) => {
     if (user_id === undefined) {

@@ -2,7 +2,7 @@ const Neo4j = require('./Neo4j');
 const sharp = require('sharp');
 const fs = require('fs');
 
-const NotificationService = require('./NotificationService');
+const NotificationService = require('../services/NotificationService');
 
 module.exports = class UserData {
 	static async getByUserID(user_id) {

@@ -62,6 +62,12 @@ export default class ChatController {
       );
       const json = await response.json();
       console.log(json);
+
+      if (json.status) {
+        screen.props.navigation.push('ViewChat', {chat_id: json.chat_id});
+      } else {
+        screen.setState({message: json.message});
+      }
     } catch (exception) {
       console.log(exception);
       return null;

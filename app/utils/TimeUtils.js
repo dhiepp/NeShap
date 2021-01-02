@@ -7,6 +7,9 @@ export default class TimeUtils {
     if (check.isBefore(moment())) {
       return time.format('DD/MM/YYYY HH:mm');
     } else {
+      if (time.isAfter(moment())) {
+        return 'vừa xong';
+      }
       return time.fromNow();
     }
   }

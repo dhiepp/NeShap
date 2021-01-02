@@ -1,7 +1,7 @@
 const Neo4j = require('./Neo4j');
 
 const UserData = require('./UserData');
-const NotificationService = require('./NotificationService');
+const NotificationService = require('../services/NotificationService');
 
 module.exports = class CommentData {
 	static async check(user_id, comment_id) {
@@ -69,7 +69,7 @@ module.exports = class CommentData {
 			const comments = result.records[0]?.get('p.comments');
 			NotificationService.from_post(user_id, post_id, 'comment', comments);
 
-			return { status: true, comment_id: comment_id, comments: comments };
+			return { status: true, comments: comments };
 		}
 		catch (exception) {
 			console.log(exception);

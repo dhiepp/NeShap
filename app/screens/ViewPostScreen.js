@@ -1,11 +1,5 @@
 import React, {Component} from 'react';
-import {
-  StyleSheet,
-  View,
-  Keyboard,
-  RefreshControl,
-  ScrollView,
-} from 'react-native';
+import {StyleSheet, View, RefreshControl, ScrollView} from 'react-native';
 import {
   ActivityIndicator,
   Title,
@@ -51,7 +45,7 @@ export default class ViewPostScreen extends Component {
               onRefresh={this._handleRefresh}
             />
           }>
-          <Card style={styles.box} onPress={() => Keyboard.dismiss()}>
+          <Card style={styles.box}>
             <TouchableRipple
               borderles
               style={styles.author_box}

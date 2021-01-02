@@ -46,7 +46,7 @@ class ListCommentComponent extends Component {
     }
     return (
       <View>
-        <Card style={styles.box} onPress={() => Keyboard.dismiss()}>
+        <Card style={styles.box}>
           <Title style={styles.title}>Bình luận</Title>
           <View style={styles.new_comment_box}>
             <TextInput

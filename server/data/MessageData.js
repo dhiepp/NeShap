@@ -1,3 +1,4 @@
+const MessageService = require('../services/MessageService');
 const ChatData = require('./ChatData');
 const Neo4j = require('./Neo4j');
 
@@ -16,7 +17,7 @@ module.exports = class MessageData {
 
 			const skip = Neo4j.int((page - 1) * 10);
 			const limit = Neo4j.int(10);
-			const result = await Neo4j.run(`MATCH (:Chat {chat_id: $chatParam})-[:HAS_MESSAGE]->(m:Message)<-[:SENDS_MESSAGE]-(a:User)
+			const result = await Neo4j.run(`MATCH (:Chat {chat_id: $chatParam})-[:HAS_MESSAGE]->(m:Message)<-[:SENDS_MESSAGE]-(a:User) 
 				RETURN m, a ORDER BY m.time DESC SKIP $skip LIMIT $limit`,
 			{ chatParam: chat_id, skip: skip, limit: limit });
 			const records = result.records;
@@ -53,16 +54,21 @@ module.exports = class MessageData {
 				return { status: false, message: 'Yêu cầu nhập nội dung tin nhắn!' };
 			}
 
-			console.log('stranger things');
-
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})<-[:HAS_MEMBER]-(c:Chat {chat_id: $chatParam}) 
 				CREATE (u)-[:SENDS_MESSAGE]->(m:Message {message_id: randomUUID(), content: $contentParam, time: datetime()})
-				<-[:HAS_MESSAGE]-(c) WITH m, c OPTIONAL MATCH (c)-[r:HAS_MEMBER]->(:User) SET r.read = false RETURN m.message_id`,
+				<-[:HAS_MESSAGE]-(c) SET c.last = datetime() WITH u, m, c 
+				OPTIONAL MATCH (c)-[r:HAS_MEMBER]->(:User) SET r.read = false RETURN u, m`,
 			{ userParam: user_id, chatParam: chat_id, contentParam: content });
-			const message_id = result.records[0]?.get('m.message_id');
-			if (!message_id) throw 'Message Write failed';
+			const record = result.records[0];
+			if (!record) throw 'Message Write failed';
 
-			return { status: true, message_id: message_id };
+			const message = record.get('m').properties;
+			const author = record.get('u')?.properties;
+			message.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
+			message.time = message.time.toString();
+			MessageService.update(chat_id, message);
+
+			return { status: true };
 		}
 		catch (exception) {
 			console.log(exception);

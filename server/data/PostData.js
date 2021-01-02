@@ -3,7 +3,7 @@ const sharp = require('sharp');
 const fs = require('fs');
 
 const UserData = require('./UserData');
-const NotificationService = require('./NotificationService');
+const NotificationService = require('../services/NotificationService');
 
 module.exports = class PostData {
 	static async getByPostID(post_id) {

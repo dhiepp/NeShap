@@ -13,7 +13,7 @@ module.exports = class NotificationData {
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) 
 				OPTIONAL MATCH (u)-[:HAS_NOTIFICATION]->(n:Notification) WHERE n.read = false
 				OPTIONAL MATCH (u)<-[c:HAS_MEMBER]-(:Chat) WHERE c.read = false
-				RETURN count(n) as nc, count(c) as cc`, { userParam: user_id });
+				RETURN count(distinct n) as nc, count(distinct c) as cc`, { userParam: user_id });
 			const record = result.records[0];
 
 			const notifications = Neo4j.int(record.get('nc')).toInt();
@@ -71,7 +71,7 @@ module.exports = class NotificationData {
 			if (!user_id) return { status: false };
 
 			const result = await Neo4j.run(`MATCH (:User {user_id: $userParam})-[:HAS_NOTIFICATION]->
-				(:Notification {notification_id: $notificationParam}) SET n.read = true`,
+				(n:Notification {notification_id: $notificationParam}) SET n.read = true`,
 			{ userParam: user_id, notificationParam: notification_id });
 			if (result.summary.counters.updates().propertiesSet == 0) throw 'Notification Read failed';
 			return { status: true };
