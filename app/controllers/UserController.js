@@ -123,26 +123,22 @@ export default class UserController {
   static async logout(screen) {
     try {
       const session_id = (await AppData.getUserData()).session_id;
-      const response = await fetch(
-        `${AppData.server}/user/logout?session_id=${session_id}`,
-        {method: 'post'},
-      );
+      await fetch(`${AppData.server}/user/logout?session_id=${session_id}`, {
+        method: 'post',
+      });
 
-      const json = await response.json();
-      if (json.status) {
-        const check = await AppData.removeUserData();
-        if (check) {
-          screen.props.navigation.dispatch(
-            CommonActions.reset({
-              index: 1,
-              routes: [
-                {
-                  name: 'Login',
-                },
-              ],
-            }),
-          );
-        }
+      const check = await AppData.removeUserData();
+      if (check) {
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'Login',
+              },
+            ],
+          }),
+        );
       }
     } catch (exception) {
       console.log(exception);

@@ -87,6 +87,10 @@ export default class AccountScreen extends Component {
   async loadUser() {
     const user_id = (await AppData.getUserData()).user_id;
     const user = await UserController.search(user_id);
+    if (!user) {
+      this._handleLogout();
+      return;
+    }
     this.setState({loading: false, user: user});
   }
   _handleProfile = () => {
