@@ -48,7 +48,7 @@ class HomeScreen extends Component {
           <ListPostComponent
             mode={this.state.mode}
             navigation={this.props.navigation}
-            user_id={null}
+            user_id={this.props.user_id}
             refresh={this.state.refresh}
             onFinishRefresh={this._finishRefresh}
             style={styles.full}

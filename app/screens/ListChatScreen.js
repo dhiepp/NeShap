@@ -10,9 +10,12 @@ import {
 } from 'react-native-paper';
 
 import ChatController from '../controllers/ChatController';
+import ChatClient from '../miscs/ChatClient';
 
 export default class ListNotificationScreen extends Component {
   state = {
+    connecting: false,
+    error: false,
     loading: true,
     refresh: false,
     loading_more: false,
@@ -21,7 +24,13 @@ export default class ListNotificationScreen extends Component {
     page: 1,
   };
   async componentDidMount() {
+    await this.connectChat();
     await this.loadChats(1, false);
+  }
+  componentWillUnmount() {
+    this.socket.off('disconnect', this._onDisconnect);
+    this.socket.off('connect', this._onConnect);
+    this.props.navigation.removeListener('focus', this._onFocus);
   }
   render() {
     if (this.state.loading) {
@@ -29,6 +38,15 @@ export default class ListNotificationScreen extends Component {
     }
     return (
       <View style={styles.full}>
+        {this.state.error && (
+          <Button
+            onPress={this._handleReconnect}
+            loading={this.state.connecting}
+            disabled={this.state.connecting}
+            color={Colors.redA400}>
+            {this.state.error}
+          </Button>
+        )}
         <ScrollView
           refreshControl={
             <RefreshControl
@@ -81,6 +99,12 @@ export default class ListNotificationScreen extends Component {
       </View>
     );
   }
+  async connectChat() {
+    this.socket = await ChatClient.connect();
+    this.socket.on('disconnect', this._onDisconnect);
+    this.socket.on('connect', this._onConnect);
+    this.props.navigation.addListener('focus', this._onFocus);
+  }
   async loadChats(page, refresh) {
     let current_chats = refresh ? [] : this.state.chats;
     let chats = await ChatController.list(page);
@@ -93,6 +117,30 @@ export default class ListNotificationScreen extends Component {
       no_more: no_more,
     });
   }
+  _onFocus = () => {
+    if (this.socket.disconnected) {
+      this._onDisconnect();
+    }
+  };
+  _onDisconnect = () => {
+    if (!this.props.navigation?.isFocused()) {
+      return;
+    }
+    this.setState({
+      error: 'Đã mất kết nối. Nhấn để thử lại!',
+      connecting: false,
+    });
+  };
+  _onConnect = () => {
+    if (!this.props.navigation?.isFocused()) {
+      return;
+    }
+    this.setState({error: false, connecting: false});
+  };
+  _handleReconnect = () => {
+    this.setState({connecting: true, error: 'Đang kết nối'});
+    this.socket.connect();
+  };
   _handleRefresh = () => {
     this.setState({refresh: true}, () => {
       this.loadChats(1, true);

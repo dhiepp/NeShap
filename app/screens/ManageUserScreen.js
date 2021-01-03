@@ -135,9 +135,10 @@ export default class ManageUserScreen extends Component {
     let users = await UserController.list('all', page);
     const no_more = !users.length;
     this.setState({
+      loading: false,
+      refresh: false,
       users: current_users.concat(users),
       page: page,
-      refresh: false,
       no_more: no_more,
     });
   }

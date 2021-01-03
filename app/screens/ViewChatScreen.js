@@ -1,5 +1,6 @@
 import React, {Component} from 'react';
-import {StyleSheet, View, Keyboard, ScrollView} from 'react-native';
+import {StyleSheet, View} from 'react-native';
+import {FlatList} from 'react-native-gesture-handler';
 import {
   ActivityIndicator,
   Card,
@@ -18,41 +19,40 @@ import {
 } from 'react-native-paper';
 import ChatController from '../controllers/ChatController';
 import MessageController from '../controllers/MessageController';
+import UserController from '../controllers/UserController';
+import ChatClient from '../miscs/ChatClient';
 
 class ViewChatScreen extends Component {
   state = {
-    messages: [],
+    error: false,
+    error_message: false,
     valid: true,
     loading: true,
     loading_more: false,
-    no_more: false,
-    error: false,
+    messages: [],
+    new_message: '',
   };
   async componentDidMount() {
-    const page = this.props.page ? this.props.page : 1;
     const chat = await ChatController.detail(this.props.route.params?.chat_id);
     if (!chat) {
       this.setState({loading: false, valid: false});
       return;
     }
 
-    Keyboard.addListener('keyboardDidShow', () => {
-      this.scroll?.scrollToEnd();
-    });
-    this.socket = await MessageController.connect(chat.chat_id);
-    this.socket.on('disconnect', () => {
-      this.setState({error: 'Đã mất kết nối đến server chat!'});
-    });
-    this.socket.on('message', (message) => {
-      this._handleUpdate(message);
-    });
-
     this.props.navigation.setOptions({title: chat.who.name});
     this.setState({chat: chat});
-    await this.loadMessages(page, false);
+
+    await this.loadMessages(1);
+    await this.connectRoom(chat.chat_id);
   }
   componentWillUnmount() {
-    this.socket.disconnect(true);
+    if (this.state.chat) {
+      ChatClient.leaveRoom(this.state.chat.chat_id);
+    }
+    this.socket?.off('join-result', this._onJoinResult);
+    this.socket?.off('send-result', this._onSendResult);
+    this.socket?.off('receive-message', this._handleUpdate);
+    this.socket?.off('disconnect', this._onDisconnect);
   }
   render() {
     if (this.state.loading) {
@@ -63,62 +63,54 @@ class ViewChatScreen extends Component {
     }
     return (
       <View style={styles.full}>
-        <ScrollView
-          ref={(r) => {
-            this.scroll = r;
-          }}
-          onContentSizeChange={() => {
-            if (this.state.page === 1) {
-              this.scroll.scrollToEnd();
-            }
-          }}>
-          {!this.state.no_more && (
-            <Button
-              loading={this.state.loading_more}
-              disabled={this.state.no_more}
-              style={styles.more}
-              onPress={this._handleLoadMore}>
-              Xem thêm
-            </Button>
-          )}
-          {this.state.messages.map((message, index) => (
+        {this.state.error && (
+          <Button color={Colors.redA400}>{this.state.error}</Button>
+        )}
+        <FlatList
+          inverted
+          data={this.state.messages}
+          renderItem={({item, index}) => (
             <View style={styles.message_area} key={index}>
-              {message.author.user_id !== this.state.chat.user_id && (
+              {item.author.user_id !== this.state.chat.user_id && (
                 <View style={styles.author_box}>
-                  <Avatar.Image
-                    size={32}
-                    source={{uri: message.author.avatar}}
-                  />
+                  <Avatar.Image size={32} source={{uri: item.author.avatar}} />
                 </View>
               )}
               <TouchableRipple
                 borderless
-                onPress={() => this._handleViewUser(message.author.user_id)}
+                onPress={() => this._handleViewUser(item.author.user_id)}
                 style={styles.message_box}>
                 <View>
                   <View style={styles.info_box}>
                     <Subheading style={styles.message_username}>
-                      {message.author.name}
+                      {item.author.name}
                     </Subheading>
-                    <Caption>{message.time}</Caption>
+                    <Caption>{item.time}</Caption>
                   </View>
                   <Paragraph style={styles.message_content}>
-                    {message.content}
+                    {item.content}
                   </Paragraph>
                 </View>
               </TouchableRipple>
-              {message.author.user_id === this.state.chat.user_id && (
+              {item.author.user_id === this.state.chat.user_id && (
                 <View style={styles.author_box}>
-                  <Avatar.Image
-                    size={32}
-                    source={{uri: message.author.avatar}}
-                  />
+                  <Avatar.Image size={32} source={{uri: item.author.avatar}} />
                 </View>
               )}
             </View>
-          ))}
-        </ScrollView>
-        <Card style={styles.box} onPress={() => Keyboard.dismiss()}>
+          )}
+          ListFooterComponent={
+            <ActivityIndicator
+              animating={this.state.loading_more}
+              size="small"
+            />
+          }
+          ListFooterComponentStyle={styles.more}
+          onEndReached={this._handleLoadMore}
+          onEndReachedThreshold={0.1}
+          keyExtractor={(item, index) => index.toString()}
+        />
+        <Card style={styles.box}>
           <View style={styles.new_message_box}>
             <TextInput
               dense
@@ -139,53 +131,76 @@ class ViewChatScreen extends Component {
           </View>
         </Card>
         <Snackbar
-          visible={this.state.error}
-          onDismiss={() => this.setState({error: false})}
+          visible={this.state.error_message}
+          onDismiss={() => this.setState({error_message: false})}
           action={{
             label: 'OK',
-            onPress: () => this.setState({error: false}),
+            onPress: () => this.setState({error_message: false}),
           }}>
-          {this.state.error}
+          {this.state.error_message}
         </Snackbar>
       </View>
     );
   }
-  async loadMessages(page, refresh) {
-    let current_messages = refresh ? [] : this.state.messages;
-    let messages = await MessageController.list(this.state.chat.chat_id, page);
-    messages = messages.reverse();
+  async connectRoom(chat_id) {
+    this.socket = await ChatClient.joinRoom(chat_id);
+    this.socket.on('join-result', this._onJoinResult);
+    this.socket.on('send-result', this._onSendResult);
+    this.socket.on('receive-message', this._handleUpdate);
+    this.socket.on('disconnect', this._onDisconnect);
+  }
+  async loadMessages(page) {
+    let current_messages = this.state.messages;
+    let load_messages = await MessageController.list(
+      this.state.chat.chat_id,
+      page,
+    );
 
-    const no_more = !messages.length;
     this.setState({
       loading: false,
-      messages: messages.concat(current_messages),
+      loading_more: false,
+      messages: current_messages.concat(load_messages),
       page: page,
-      no_more: no_more,
     });
   }
+  _onDisconnect = () => {
+    this.setState({error: 'Đã mất kết nối.'});
+  };
+  _onJoinResult = (data) => {
+    if (!data.status) {
+      this.setState({error: data.message});
+      return;
+    }
+  };
+  _onSendResult = (data) => {
+    if (!data.status) {
+      this.setState({error_message: data.message});
+      return;
+    }
+    this._handleUpdate(data.sent_message);
+  };
   _handleUpdate = (message) => {
     let messages = this.state.messages;
-    messages.push(MessageController.update(message));
+    messages.unshift(MessageController.update(message));
     this.setState({messages: messages});
   };
   _handleLoadMore = () => {
-    const page = this.state.page + 1;
     this.setState({loading_more: true});
-    this.loadMessages(page, false).then(() => {
-      this.setState({loading_more: false});
-    });
+    const page = this.state.page + 1;
+    this.loadMessages(page);
   };
   _handleMessageInput = (text) => {
     this.setState({new_message: text});
   };
   _handleSendMessage = () => {
-    MessageController.send(this);
+    ChatClient.send(this.state.chat.chat_id, this.state.new_message);
+    this.setState({new_message: ''});
   };
   _handleViewUser = (user_id) => {
     if (user_id === undefined) {
       return;
     }
-    this.props.navigation.push('ViewUser', {user_id: user_id});
+    UserController.view(this.props.navigation, user_id);
   };
 }
 
@@ -242,6 +257,6 @@ const styles = StyleSheet.create({
     margin: 10,
   },
   more: {
-    marginBottom: 10,
+    margin: 10,
   },
 });

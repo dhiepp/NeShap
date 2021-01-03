@@ -1,4 +1,4 @@
-import * as AppData from '../AppData';
+import * as AppData from '../miscs/AppData';
 import * as Crypto from 'expo-crypto';
 import {CommonActions} from '@react-navigation/native';
 
@@ -217,10 +217,12 @@ export default class UserController {
       const request = {};
       request.session_id = (await AppData.getUserData()).session_id;
       request.name = screen.state.new_name;
-      request.password = await Crypto.digestStringAsync(
-        Crypto.CryptoDigestAlgorithm.SHA256,
-        screen.state.new_password,
-      );
+      request.password = screen.state.new_password
+        ? await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            screen.state.new_password,
+          )
+        : undefined;
       const avatar = screen.state.new_avatar;
 
       const data = new FormData();

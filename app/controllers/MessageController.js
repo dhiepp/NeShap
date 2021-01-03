@@ -1,6 +1,5 @@
-import * as AppData from '../AppData';
-import TimeUtils from '../utils/TimeUtils';
-import {io} from 'socket.io-client';
+import * as AppData from '../miscs/AppData';
+import * as TimeUtils from '../miscs/TimeUtils';
 
 export default class MessageController {
   static async list(chat_id, page) {
@@ -28,7 +27,7 @@ export default class MessageController {
   static async send(screen) {
     try {
       const content = screen.state.new_message;
-      screen.setState({error: false, new_message: ''});
+      screen.setState({error_message: false, new_message: ''});
       const session_id = (await AppData.getUserData()).session_id;
       const data = {};
       data.session_id = session_id;
@@ -48,23 +47,10 @@ export default class MessageController {
       if (json.status) {
         return json.message_id;
       } else {
-        screen.setState({error: json.message});
+        screen.setState({error_message: json.message});
       }
     } catch (exception) {
       console.log(exception);
-    }
-  }
-
-  static async connect(chat_id) {
-    try {
-      const session_id = (await AppData.getUserData()).session_id;
-
-      const socket = io(AppData.server, {path: '/realtime-chat'});
-      socket.emit('auth', {session_id: session_id, chat_id: chat_id});
-      return socket;
-    } catch (exception) {
-      console.log(exception);
-      return null;
     }
   }
 

@@ -1,7 +1,7 @@
 import {CommonActions} from '@react-navigation/native';
 
-import * as AppData from '../AppData';
-import TimeUtils from '../utils/TimeUtils';
+import * as AppData from '../miscs/AppData';
+import * as TimeUtils from '../miscs/TimeUtils';
 
 export default class PostController {
   static cover(post_id) {

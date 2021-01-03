@@ -1,4 +1,3 @@
-const MessageService = require('../services/MessageService');
 const ChatData = require('./ChatData');
 const Neo4j = require('./Neo4j');
 
@@ -57,18 +56,17 @@ module.exports = class MessageData {
 			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})<-[:HAS_MEMBER]-(c:Chat {chat_id: $chatParam}) 
 				CREATE (u)-[:SENDS_MESSAGE]->(m:Message {message_id: randomUUID(), content: $contentParam, time: datetime()})
 				<-[:HAS_MESSAGE]-(c) SET c.last = datetime() WITH u, m, c 
-				OPTIONAL MATCH (c)-[r:HAS_MEMBER]->(:User) SET r.read = false RETURN u, m`,
+				OPTIONAL MATCH (c)-[r:HAS_MEMBER]->(w:User) WHERE NOT w.user_id = $userParam SET r.read = false RETURN u, m`,
 			{ userParam: user_id, chatParam: chat_id, contentParam: content });
 			const record = result.records[0];
-			if (!record) throw 'Message Write failed';
+			if (!record) throw 'Message Send failed';
 
 			const message = record.get('m').properties;
 			const author = record.get('u')?.properties;
 			message.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
 			message.time = message.time.toString();
-			MessageService.update(chat_id, message);
 
-			return { status: true };
+			return { status: true, sent_message: message };
 		}
 		catch (exception) {
 			console.log(exception);

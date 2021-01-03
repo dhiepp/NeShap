@@ -275,10 +275,10 @@ module.exports = class UserData {
 				OPTIONAL MATCH (u)<-[f1:FRIENDS]-(f) MERGE (u)-[:FRIENDS]->(f) RETURN f1`,
 			{ userParam: user_id, friendParam: friend_id });
 			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'User Friend failed!';
-
-			NotificationService.from_friend(user_id, friend_id);
-
 			const f1 = result.records[0]?.get('f1') ? true : false;
+
+			NotificationService.from_friend(user_id, friend_id, f1);
+
 			return { status: true, f1: f1, f2: true };
 		}
 		catch (exception) {

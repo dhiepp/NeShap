@@ -10,21 +10,27 @@ import {
 import {CommonActions} from '@react-navigation/native';
 
 import UserController from '../controllers/UserController';
-import * as AppData from '../AppData';
+import * as AppData from '../miscs/AppData';
 
 export default class AccountScreen extends Component {
   state = {loading: false};
   async componentDidMount() {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     this.setState({loading: true});
-    const loggedIn = await AppData.checkUserData();
-    const targetScreen = loggedIn ? 'HomeTabs' : 'Login';
+
+    const user_data = await AppData.getUserData();
+    let targetScreen = 'HomeTabs';
+    if (!user_data) {
+      targetScreen = 'Login';
+    }
+
     this.props.navigation.dispatch(
       CommonActions.reset({
         index: 1,
         routes: [
           {
             name: targetScreen,
+            params: {user_data: user_data},
           },
         ],
       }),

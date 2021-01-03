@@ -8,7 +8,7 @@ const CommentRouter = require('./router/CommentRouter');
 const NotificationRouter = require('./router/NotificationRouter');
 const ChatRouter = require('./router/ChatRouter');
 const MessageRouter = require('./router/MessageRouter');
-const MessageService = require('./services/MessageService');
+const ChatService = require('./services/ChatService');
 
 server.use(express.json());
 
@@ -22,7 +22,7 @@ server.use('/message', MessageRouter);
 const http = require('http').createServer(server);
 const io = require('socket.io')(http, { path: '/realtime-chat' });
 
-MessageService.start(io);
+io.on('connect', socket => ChatService.connect(socket));
 
 http.listen(process.env.PORT || port, () => {
 	console.log('Server started on: ' + port);

@@ -13,6 +13,10 @@ import NotificationController from '../../controllers/NotificationController';
 const Tab = createMaterialBottomTabNavigator();
 
 export default class HomeTabs extends Component {
+  constructor(props) {
+    super(props);
+    this.state = {user_data: props.route.params?.user_data};
+  }
   async componentDidMount() {
     await this.loadBadges();
   }
@@ -25,14 +29,16 @@ export default class HomeTabs extends Component {
         barStyle={{backgroundColor: '#6200ee'}}>
         <Tab.Screen
           name="Home"
-          component={HomeScreen}
           options={{
             title: 'Trang Chủ',
             tabBarIcon: ({color}) => (
               <MaterialCommunityIcons name="home" color={color} size={26} />
             ),
-          }}
-        />
+          }}>
+          {(props) => (
+            <HomeScreen {...props} user_id={this.state.user_data.user_id} />
+          )}
+        </Tab.Screen>
         <Tab.Screen
           name="Search"
           component={SearchScreen}
@@ -74,14 +80,16 @@ export default class HomeTabs extends Component {
         </Tab.Screen>
         <Tab.Screen
           name="Account"
-          component={AccountScreen}
           options={{
             title: 'Tài Khoản',
             tabBarIcon: ({color}) => (
               <MaterialCommunityIcons name="account" color={color} size={26} />
             ),
-          }}
-        />
+          }}>
+          {(props) => (
+            <AccountScreen {...props} user_id={this.state.user_data.user_id} />
+          )}
+        </Tab.Screen>
       </Tab.Navigator>
     );
   }

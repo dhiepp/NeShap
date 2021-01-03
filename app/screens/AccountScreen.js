@@ -10,7 +10,6 @@ import {
 } from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
-import * as AppData from '../AppData';
 
 export default class AccountScreen extends Component {
   state = {loading: true};
@@ -85,7 +84,7 @@ export default class AccountScreen extends Component {
   }
 
   async loadUser() {
-    const user_id = (await AppData.getUserData()).user_id;
+    const user_id = this.props.user_id;
     const user = await UserController.search(user_id);
     if (!user) {
       this._handleLogout();

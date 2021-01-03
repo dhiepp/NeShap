@@ -1,5 +1,5 @@
-import * as AppData from '../AppData';
-import TimeUtils from '../utils/TimeUtils';
+import * as AppData from '../miscs/AppData';
+import * as TimeUtils from '../miscs/TimeUtils';
 
 export default class CommentController {
   static async list(post_id, page) {
