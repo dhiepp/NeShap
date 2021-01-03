@@ -28,8 +28,8 @@ export default class ListNotificationScreen extends Component {
     await this.loadChats(1, false);
   }
   componentWillUnmount() {
-    this.socket.off('disconnect', this._onDisconnect);
-    this.socket.off('connect', this._onConnect);
+    this.socket?.off('disconnect', this._onDisconnect);
+    this.socket?.off('connect', this._onConnect);
     this.props.navigation.removeListener('focus', this._onFocus);
   }
   render() {
@@ -73,9 +73,9 @@ export default class ListNotificationScreen extends Component {
                     !chat.read && (
                       <Avatar.Icon
                         size={32}
-                        icon="chat-alert"
+                        icon="chat-processing"
                         color={Colors.white}
-                        style={styles.icon}
+                        style={styles.icon_unread}
                       />
                     )
                   }
@@ -172,9 +172,6 @@ const styles = StyleSheet.create({
     padding: 10,
     margin: 10,
     marginTop: 0,
-  },
-  icon: {
-    marginRight: 20,
   },
   icon_unread: {
     marginRight: 20,

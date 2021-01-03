@@ -16,10 +16,11 @@ import {
   Headline,
   Caption,
   Snackbar,
+  Portal,
+  Dialog,
 } from 'react-native-paper';
 import ChatController from '../controllers/ChatController';
 import MessageController from '../controllers/MessageController';
-import UserController from '../controllers/UserController';
 import ChatClient from '../miscs/ChatClient';
 
 class ViewChatScreen extends Component {
@@ -39,7 +40,17 @@ class ViewChatScreen extends Component {
       return;
     }
 
-    this.props.navigation.setOptions({title: chat.who.name});
+    this.props.navigation.setOptions({
+      title: chat.who.name,
+      headerRight: () => (
+        <Button
+          color={Colors.redA200}
+          icon="chat-remove"
+          onPress={this._handleChatAction}>
+          Xóa
+        </Button>
+      ),
+    });
     this.setState({chat: chat});
 
     await this.loadMessages(1);
@@ -53,6 +64,7 @@ class ViewChatScreen extends Component {
     this.socket?.off('send-result', this._onSendResult);
     this.socket?.off('receive-message', this._handleUpdate);
     this.socket?.off('disconnect', this._onDisconnect);
+    this.socket?.off('connect', this._onConnect);
   }
   render() {
     if (this.state.loading) {
@@ -78,7 +90,7 @@ class ViewChatScreen extends Component {
               )}
               <TouchableRipple
                 borderless
-                onPress={() => this._handleViewUser(item.author.user_id)}
+                onPress={() => null}
                 style={styles.message_box}>
                 <View>
                   <View style={styles.info_box}>
@@ -139,6 +151,18 @@ class ViewChatScreen extends Component {
           }}>
           {this.state.error_message}
         </Snackbar>
+        <Portal>
+          <Dialog visible={this.state.delete_chat} onDismiss={this._hideDialog}>
+            <Dialog.Title>Chat với {this.state.chat.who.name}</Dialog.Title>
+            <Dialog.Content>
+              <Paragraph>Bạn có muốn xóa cuộc trò chuyện này?</Paragraph>
+            </Dialog.Content>
+            <Dialog.Actions>
+              <Button onPress={this._handleDeleteChat}>Có</Button>
+              <Button onPress={this._hideDialog}>Không</Button>
+            </Dialog.Actions>
+          </Dialog>
+        </Portal>
       </View>
     );
   }
@@ -148,6 +172,7 @@ class ViewChatScreen extends Component {
     this.socket.on('send-result', this._onSendResult);
     this.socket.on('receive-message', this._handleUpdate);
     this.socket.on('disconnect', this._onDisconnect);
+    this.socket.on('connect', this._onConnect);
   }
   async loadMessages(page) {
     let current_messages = this.state.messages;
@@ -163,6 +188,9 @@ class ViewChatScreen extends Component {
       page: page,
     });
   }
+  _onConnect = () => {
+    this.setState({error: false});
+  };
   _onDisconnect = () => {
     this.setState({error: 'Đã mất kết nối.'});
   };
@@ -196,11 +224,14 @@ class ViewChatScreen extends Component {
     ChatClient.send(this.state.chat.chat_id, this.state.new_message);
     this.setState({new_message: ''});
   };
-  _handleViewUser = (user_id) => {
-    if (user_id === undefined) {
-      return;
-    }
-    UserController.view(this.props.navigation, user_id);
+  _handleChatAction = () => {
+    this.setState({delete_chat: true});
+  };
+  _hideDialog = () => {
+    this.setState({delete_chat: false});
+  };
+  _handleDeleteChat = () => {
+    ChatController.delete(this);
   };
 }
 

@@ -9,7 +9,6 @@ import {
 } from 'react-native-paper';
 import {CommonActions} from '@react-navigation/native';
 
-import UserController from '../controllers/UserController';
 import * as AppData from '../miscs/AppData';
 
 export default class AccountScreen extends Component {
@@ -71,9 +70,6 @@ export default class AccountScreen extends Component {
         </Card>
       </ImageBackground>
     );
-  };
-  _handleLogout = () => {
-    UserController.logout(this);
   };
 }
 

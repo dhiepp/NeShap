@@ -103,6 +103,9 @@ export default class ViewPostScreen extends Component {
                 onPress={this._handleLike}>
                 {this.state.post.likes} Thích
               </Button>
+              <Button icon="message">
+                {this.state.post.comments} Bình luận
+              </Button>
             </Card.Actions>
           </Card>
           <ListCommentComponent

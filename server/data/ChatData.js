@@ -129,7 +129,7 @@ module.exports = class ChatData {
 				return { status: false, message: 'Không có quyền xóa hoặc đoạn chat không tồn tại!' };
 			}
 
-			const result = await Neo4j.run(`MATCH (c:Chat {chat_id: chatParam})-[:HAS_MESSAGE]->(m:Message) 
+			const result = await Neo4j.run(`MATCH (c:Chat {chat_id: $chatParam})-[:HAS_MESSAGE]->(m:Message) 
 				DETACH DELETE c, m`, { chatParam: chat_id });
 			if (result.summary.counters.updates().deletedNodes == 0) throw 'Chat Delete Failed!';
 

@@ -55,19 +55,22 @@ export default class UserController {
       );
 
       const json = await response.json();
-      console.log(json);
+
+      const user_data = {
+        user_id: json.user_id,
+        session_id: json.session_id,
+        role: json.role,
+      };
+
       if (json.status) {
-        AppData.setUserData({
-          user_id: json.user_id,
-          session_id: json.session_id,
-          role: json.role,
-        });
+        AppData.setUserData(user_data);
         screen.props.navigation.dispatch(
           CommonActions.reset({
             index: 1,
             routes: [
               {
                 name: 'HomeTabs',
+                params: {user_data: user_data},
               },
             ],
           }),
@@ -94,20 +97,22 @@ export default class UserController {
         {method: 'post'},
       );
       const json = await response.json();
-      console.log(json);
+
+      const user_data = {
+        user_id: json.user_id,
+        session_id: json.session_id,
+        role: json.role,
+      };
+
       if (json.status) {
-        AppData.setUserData({
-          user_id: json.user_id,
-          session_id: json.session_id,
-          role: json.role,
-        });
+        AppData.setUserData(user_data);
         screen.props.navigation.dispatch(
           CommonActions.reset({
             index: 1,
             routes: [
               {
                 name: 'HomeTabs',
-                params: {screen: 'Account'},
+                params: {screen: 'Account', user_data: user_data},
               },
             ],
           }),

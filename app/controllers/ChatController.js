@@ -70,7 +70,28 @@ export default class ChatController {
       }
     } catch (exception) {
       console.log(exception);
-      return null;
+    }
+  }
+
+  static async delete(screen) {
+    try {
+      const session_id = (await AppData.getUserData()).session_id;
+      const chat_id = screen.state.chat.chat_id;
+
+      const response = await fetch(
+        `${AppData.server}/chat/delete?session_id=${session_id}&chat_id=${chat_id}`,
+        {method: 'post'},
+      );
+      const json = await response.json();
+      console.log(json);
+
+      if (json.status) {
+        screen.props.navigation.goBack();
+      } else {
+        screen.setState({error_message: json.message});
+      }
+    } catch (exception) {
+      console.log(exception);
     }
   }
 
