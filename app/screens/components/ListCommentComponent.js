@@ -169,10 +169,11 @@ class ListCommentComponent extends Component {
       return;
     }
     Keyboard.dismiss();
-    CommentController.add(this).then(() => {
+    CommentController.add(this).then((comments) => {
       this._handleMessage();
       if (!this.state.error) {
         this.loadComments(1, true);
+        this.props.updateComments(comments);
       }
     });
   };

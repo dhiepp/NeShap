@@ -18,6 +18,9 @@ server.use('/comment', CommentRouter);
 server.use('/notification', NotificationRouter);
 server.use('/chat', ChatRouter);
 server.use('/message', MessageRouter);
+server.get('/', (req, res) => {
+	res.sendFile('NeShap.apk', { root: './' });
+});
 
 const http = require('http').createServer(server);
 const io = require('socket.io')(http, { path: '/realtime-chat' });

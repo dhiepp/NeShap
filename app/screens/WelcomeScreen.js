@@ -1,12 +1,6 @@
 import React, {Component} from 'react';
 import {StyleSheet, Image, ImageBackground} from 'react-native';
-import {
-  Colors,
-  Button,
-  Card,
-  ActivityIndicator,
-  Headline,
-} from 'react-native-paper';
+import {Colors, ActivityIndicator} from 'react-native-paper';
 import {CommonActions} from '@react-navigation/native';
 
 import * as AppData from '../miscs/AppData';
@@ -17,10 +11,11 @@ export default class AccountScreen extends Component {
     await new Promise((resolve) => setTimeout(resolve, 1000));
     this.setState({loading: true});
 
+    const check = await AppData.checkUserData();
     const user_data = await AppData.getUserData();
-    let targetScreen = 'HomeTabs';
-    if (!user_data) {
-      targetScreen = 'Login';
+    let targetScreen = 'Login';
+    if (check) {
+      targetScreen = 'HomeTabs';
     }
 
     this.props.navigation.dispatch(
@@ -49,28 +44,6 @@ export default class AccountScreen extends Component {
       </ImageBackground>
     );
   }
-  NotLoggedInView = () => {
-    return (
-      <ImageBackground
-        source={require('./static/background.png')}
-        style={styles.full}>
-        <Image source={require('./static/logo.png')} style={styles.logo} />
-        <Card style={styles.box}>
-          <Headline style={styles.title}>Bạn chưa đăng nhập!</Headline>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Login')}>
-            Đăng nhập
-          </Button>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Register')}>
-            Đăng ký
-          </Button>
-        </Card>
-      </ImageBackground>
-    );
-  };
 }
 
 const styles = StyleSheet.create({

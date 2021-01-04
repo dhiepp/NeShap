@@ -82,7 +82,12 @@ class ViewChatScreen extends Component {
           inverted
           data={this.state.messages}
           renderItem={({item, index}) => (
-            <View style={styles.message_area} key={index}>
+            <View
+              style={
+                item.author.user_id === this.state.chat.user_id
+                  ? styles.message_area_right
+                  : styles.message_area_left
+              }>
               {item.author.user_id !== this.state.chat.user_id && (
                 <View style={styles.author_box}>
                   <Avatar.Image size={32} source={{uri: item.author.avatar}} />
@@ -104,11 +109,6 @@ class ViewChatScreen extends Component {
                   </Paragraph>
                 </View>
               </TouchableRipple>
-              {item.author.user_id === this.state.chat.user_id && (
-                <View style={styles.author_box}>
-                  <Avatar.Image size={32} source={{uri: item.author.avatar}} />
-                </View>
-              )}
             </View>
           )}
           ListFooterComponent={
@@ -260,16 +260,23 @@ const styles = StyleSheet.create({
     flex: 1,
     margin: 5,
   },
-  message_area: {
+  message_area_left: {
     flexDirection: 'row',
     margin: 5,
+    marginTop: 0,
+    marginRight: 100,
+  },
+  message_area_right: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    margin: 5,
+    marginTop: 0,
+    marginLeft: 100,
   },
   author_box: {
-    flex: 1,
-    padding: 5,
+    margin: 5,
   },
   message_box: {
-    flex: 9,
     borderRadius: 10,
     padding: 10,
     backgroundColor: Colors.white,
@@ -283,6 +290,7 @@ const styles = StyleSheet.create({
   },
   message_username: {
     fontWeight: 'bold',
+    marginRight: 10,
   },
   message_content: {
     margin: 10,

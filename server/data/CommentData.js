@@ -66,7 +66,7 @@ module.exports = class CommentData {
 			const comment_id = result.records[0]?.get('c.comment_id');
 			if (!comment_id) throw 'Comment Write failed';
 
-			const comments = result.records[0]?.get('p.comments');
+			const comments = Neo4j.int(result.records[0]?.get('p.comments')).toInt();
 			NotificationService.from_post(user_id, post_id, 'comment', comments);
 
 			return { status: true, comments: comments };

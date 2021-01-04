@@ -98,6 +98,7 @@ export default class EditPostScreen extends Component {
             </View>
             <View style={styles.inline_box}>
               <TextInput
+                dense
                 label="Tags"
                 mode="outlined"
                 style={styles.inline_input}

@@ -114,6 +114,7 @@ export default class ViewPostScreen extends Component {
             navigation={this.props.navigation}
             onMessage={this._handleMessage}
             onFinishRefresh={this._finishRefresh}
+            updateComments={this._updateComments}
           />
         </ScrollView>
         <Snackbar
@@ -149,6 +150,11 @@ export default class ViewPostScreen extends Component {
   };
   _finishRefresh = () => {
     this.setState({refresh: false});
+  };
+  _updateComments = (comments) => {
+    const post = this.state.post;
+    post.comments = comments;
+    this.setState({post: post});
   };
   _handleViewAuthor = () => {
     if (!this.state.post.author.user_id) {

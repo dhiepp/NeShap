@@ -43,7 +43,7 @@ export default class CommentController {
       console.log(json);
       if (json.status) {
         screen.setState({error: false, sendable: true, new_comment: ''});
-        return json.comment_id;
+        return json.comments;
       } else {
         screen.setState({
           error: true,
