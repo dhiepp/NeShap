@@ -40,7 +40,7 @@ export default class CommentController {
 
       const response = await fetch(`${AppData.server}/comment/write`, init);
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         screen.setState({error: false, sendable: true, new_comment: ''});
         return json.comments;
@@ -69,7 +69,7 @@ export default class CommentController {
         {method: 'post'},
       );
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         screen.setState({
           error: false,

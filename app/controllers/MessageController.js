@@ -43,7 +43,7 @@ export default class MessageController {
 
       const response = await fetch(`${AppData.server}/message/send`, init);
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         return json.message_id;
       } else {

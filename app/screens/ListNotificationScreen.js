@@ -6,7 +6,7 @@ import {
   Avatar,
   Button,
   Headline,
-  Subheading,
+  Text,
   Colors,
 } from 'react-native-paper';
 
@@ -66,7 +66,7 @@ export default class ListNotificationScreen extends Component {
                   )}
                 />
                 <Card.Content>
-                  <Subheading>{notification.content}</Subheading>
+                  <Text>{notification.content}</Text>
                 </Card.Content>
               </Card>
             );

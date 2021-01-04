@@ -61,7 +61,6 @@ export default class ChatController {
         {method: 'post'},
       );
       const json = await response.json();
-      console.log(json);
 
       if (json.status) {
         screen.props.navigation.push('ViewChat', {chat_id: json.chat_id});
@@ -83,7 +82,6 @@ export default class ChatController {
         {method: 'post'},
       );
       const json = await response.json();
-      console.log(json);
 
       if (json.status) {
         screen.props.navigation.goBack();

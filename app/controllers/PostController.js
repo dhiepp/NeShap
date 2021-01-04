@@ -38,7 +38,7 @@ export default class PostController {
 
       const response = await fetch(`${AppData.server}/post/write`, init);
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         screen.props.navigation.dispatch(
           CommonActions.reset({
@@ -84,7 +84,7 @@ export default class PostController {
 
       const response = await fetch(`${AppData.server}/post/edit`, init);
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         screen.setState({
           error: false,

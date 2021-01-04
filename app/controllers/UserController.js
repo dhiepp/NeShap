@@ -48,7 +48,6 @@ export default class UserController {
         screen.state.password,
       );
 
-      console.log(password);
       const response = await fetch(
         `${AppData.server}/user/login?name=${name}&password=${password}`,
         {method: 'post'},
@@ -246,7 +245,7 @@ export default class UserController {
 
       const response = await fetch(`${AppData.server}/user/edit`, init);
       const json = await response.json();
-      console.log(json);
+
       if (json.status) {
         screen.setState({
           error: false,
