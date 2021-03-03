@@ -1,5 +1,5 @@
 import React, {Component} from 'react';
-import {StyleSheet, View, Keyboard, RefreshControl} from 'react-native';
+import {StyleSheet, View, RefreshControl, ScrollView} from 'react-native';
 import {
   ActivityIndicator,
   Title,
@@ -13,12 +13,10 @@ import {
   Headline,
   TouchableRipple,
 } from 'react-native-paper';
-import {ScrollView} from 'react-native-gesture-handler';
-import moment from 'moment';
 
 import PostController from '../controllers/PostController';
 import UserController from '../controllers/UserController';
-import ViewComment from './components/ViewComment';
+import ListCommentComponent from './components/ListCommentComponent';
 
 export default class ViewPostScreen extends Component {
   state = {
@@ -27,8 +25,8 @@ export default class ViewPostScreen extends Component {
     refresh: false,
     message: false,
   };
-  componentDidMount() {
-    this.loadPost();
+  async componentDidMount() {
+    await this.loadPost();
   }
   render() {
     if (this.state.loading) {
@@ -47,19 +45,18 @@ export default class ViewPostScreen extends Component {
               onRefresh={this._handleRefresh}
             />
           }>
-          <Card style={styles.box} onPress={() => Keyboard.dismiss()}>
+          <Card style={styles.box}>
             <TouchableRipple
               borderles
               style={styles.author_box}
               onPress={this._handleViewAuthor}>
               <Card.Title
-                title={this.state.author.username}
-                subtitle={this.state.time}
-                left={props => (
+                title={this.state.post.author.name}
+                subtitle={this.state.post.time}
+                left={(props) => (
                   <Avatar.Image
                     size={props.size}
-                    source={{uri: this.state.author.avatar}}
-                    style={styles.avatar}
+                    source={{uri: this.state.post.author.avatar}}
                   />
                 )}
                 right={() => {
@@ -77,7 +74,7 @@ export default class ViewPostScreen extends Component {
               />
             </TouchableRipple>
 
-            {this.state.post.hasCover && (
+            {this.state.post.has_cover && (
               <Card.Cover
                 style={styles.cover}
                 source={{uri: this.state.post.cover}}
@@ -87,7 +84,7 @@ export default class ViewPostScreen extends Component {
               <Title style={styles.title}>{this.state.post.title}</Title>
               <Paragraph>{this.state.post.content}</Paragraph>
               <View style={styles.tags}>
-                {this.state.post.tags.map(tag => (
+                {this.state.post.tags.map((tag) => (
                   <Chip
                     key={tag}
                     icon="tag"
@@ -100,27 +97,24 @@ export default class ViewPostScreen extends Component {
             </Card.Content>
             <Card.Actions>
               <Button
-                icon="thumb-up"
-                mode={this.state.liked ? 'contained' : 'text'}
+                icon="heart"
+                mode={this.state.post.liked ? 'contained' : 'text'}
                 disabled={this.state.perm.value === 0}
                 onPress={this._handleLike}>
-                {this.state.likes.length} Thích
+                {this.state.post.likes} Thích
               </Button>
-              <Button
-                icon="thumb-down"
-                mode={this.state.disliked ? 'contained' : 'text'}
-                disabled={this.state.perm.value === 0}
-                onPress={this._handleDislike}>
-                {this.state.dislikes.length} Không thích
+              <Button icon="message">
+                {this.state.post.comments} Bình luận
               </Button>
             </Card.Actions>
           </Card>
-          <ViewComment
-            postid={this.state.post._id}
+          <ListCommentComponent
+            post_id={this.state.post.post_id}
             refresh={this.state.refresh}
             navigation={this.props.navigation}
             onMessage={this._handleMessage}
             onFinishRefresh={this._finishRefresh}
+            updateComments={this._updateComments}
           />
         </ScrollView>
         <Snackbar
@@ -137,34 +131,17 @@ export default class ViewPostScreen extends Component {
   }
 
   async loadPost() {
-    const post = await PostController.get(this.props.route.params.postid);
+    const post = await PostController.detail(this.props.route.params?.post_id);
     if (!post) {
       this.setState({loading: false, valid: false});
       return;
     }
-    const author = await UserController.get(post.authorid);
-    const perm = await UserController.checkPerm(post.authorid);
-    const time = moment(post.time).fromNow();
-    const likes = post.likes ? post.likes : [];
-    const dislikes = post.dislikes ? post.dislikes : [];
+    const perm = await UserController.checkPerm(post.author.user_id);
     this.setState({
       loading: false,
       refresh: false,
       post: post,
-      author: author,
       perm: perm,
-      time: time,
-      likes: likes,
-      dislikes: dislikes,
-    });
-    this.updateRating();
-  }
-  updateRating() {
-    const liked = this.state.likes.includes(this.state.perm.userid);
-    const disliked = this.state.dislikes.includes(this.state.perm.userid);
-    this.setState({
-      liked: liked,
-      disliked: disliked,
     });
   }
   _handleRefresh = () => {
@@ -174,25 +151,29 @@ export default class ViewPostScreen extends Component {
   _finishRefresh = () => {
     this.setState({refresh: false});
   };
+  _updateComments = (comments) => {
+    const post = this.state.post;
+    post.comments = comments;
+    this.setState({post: post});
+  };
   _handleViewAuthor = () => {
-    if (this.state.author._id === undefined) {
+    if (!this.state.post.author.user_id) {
       return;
     }
-    UserController.view(this.props.navigation, this.state.post.authorid);
+    UserController.view(this.props.navigation, this.state.post.author.user_id);
   };
   _handleEdit = () => {
-    this.props.navigation.navigate('EditPost', {postid: this.state.post._id});
+    this.props.navigation.navigate('EditPost', {
+      post_id: this.state.post.post_id,
+    });
   };
-  _handleViewTag = tag => {
+  _handleViewTag = (tag) => {
     this.props.navigation.push('ViewTag', {tag: tag});
   };
   _handleLike = () => {
-    PostController.like(this).then(() => this.updateRating());
+    PostController.like(this);
   };
-  _handleDislike = () => {
-    PostController.dislike(this).then(() => this.updateRating());
-  };
-  _handleMessage = message => {
+  _handleMessage = (message) => {
     this.setState({message: message});
   };
 }

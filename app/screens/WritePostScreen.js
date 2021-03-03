@@ -1,6 +1,7 @@
 import React, {Component} from 'react';
 import {StyleSheet, View, Keyboard} from 'react-native';
 import {
+  ActivityIndicator,
   TextInput,
   Title,
   Button,
@@ -21,9 +22,12 @@ export default class WritePostScreen extends Component {
     title: '',
     content: '',
     tags: new Set(),
-    newTags: '',
+    new_tags: '',
   };
   render() {
+    if (this.state.loading) {
+      return <ActivityIndicator size="large" style={styles.full} />;
+    }
     return (
       <View style={styles.full}>
         <ScrollView keyboardShouldPersistTaps="handled" style={styles.full}>
@@ -35,6 +39,7 @@ export default class WritePostScreen extends Component {
                   ? {uri: this.state.cover.uri}
                   : require('./static/default_cover.jpg')
               }
+              resizeMode="contain"
               style={styles.cover}
             />
             <Button
@@ -52,17 +57,18 @@ export default class WritePostScreen extends Component {
               multiline={false}
               maxLength={50}
               style={styles.child}
-              onChangeText={text => this.setState({title: text})}
+              onChangeText={(text) => this.setState({title: text})}
             />
             <TextInput
               label="Nội dung"
               mode="outlined"
               multiline={true}
+              maxLength={5000}
               style={styles.child}
-              onChangeText={text => this.setState({content: text})}
+              onChangeText={(text) => this.setState({content: text})}
             />
             <View style={styles.tags}>
-              {Array.from(this.state.tags).map(tag => (
+              {Array.from(this.state.tags).map((tag) => (
                 <Chip
                   key={tag}
                   icon="tag"
@@ -75,11 +81,12 @@ export default class WritePostScreen extends Component {
             </View>
             <View style={styles.inline_box}>
               <TextInput
+                dense
                 label="Tags"
                 mode="outlined"
                 style={styles.inline_input}
-                value={this.state.newTags}
-                onChangeText={text => this.setState({newTags: text})}
+                value={this.state.new_tags}
+                onChangeText={(text) => this.setState({new_tags: text})}
               />
               <Button
                 mode="contained"
@@ -111,29 +118,26 @@ export default class WritePostScreen extends Component {
   }
 
   _handleImagePicker = () => {
-    ImagePicker.showImagePicker(response => {
+    ImagePicker.showImagePicker((response) => {
       if (response.didCancel === undefined) {
         this.setState({cover: response});
       }
     });
   };
   _handleTagInput = () => {
-    if (!this.state.newTags) {
+    if (!this.state.new_tags) {
       return;
     }
     let current_tags = this.state.tags;
-    const newTags = this.state.newTags
-      .toLowerCase()
-      .trim()
-      .split(/\s+/);
-    newTags.forEach(tag => {
+    const new_tags = this.state.new_tags.toLowerCase().trim().split(/\s+/);
+    new_tags.forEach((tag) => {
       if (tag.match(/^[0-9a-zA-Z]{3,20}$/)) {
         current_tags.add(tag);
       }
     });
-    this.setState({tags: current_tags, newTags: ''});
+    this.setState({tags: current_tags, new_tags: ''});
   };
-  _handleTagRemove = tag => {
+  _handleTagRemove = (tag) => {
     const tags = this.state.tags;
     tags.delete(tag);
     this.setState({tags: tags});

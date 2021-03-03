@@ -30,7 +30,7 @@ local.properties
 *.iml
 
 # Android Release
-android/app/release/
+app/android/app/release/
 
 # node.js
 #
@@ -59,11 +59,11 @@ buck-out/
 *.jsbundle
 
 # CocoaPods
-/ios/Pods/
+app/ios/Pods/
 
 # Server data
 /server/images/avatar/
 /server/images/cover/
 
-# IOS
-ios/
+# VS Code
+.vscode/

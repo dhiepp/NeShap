@@ -1,32 +1,79 @@
-import * as AppData from '../AppData';
+import * as AppData from '../miscs/AppData';
 import * as Crypto from 'expo-crypto';
+import {CommonActions} from '@react-navigation/native';
 
 export default class UserController {
-  static async view(navigation, userid) {
-    navigation.push('ViewUser', {userid: userid});
+  static avatar(user_id) {
+    if (!user_id) {
+      return './screens/static/default_avatar.png';
+    }
+    return `${AppData.server}/user/avatar?userid=${user_id}&t=${Date.now()}`;
+  }
+
+  static async view(navigation, user_id) {
+    navigation.push('ViewUser', {user_id: user_id});
+  }
+
+  static async checkPerm(check_id) {
+    try {
+      const user_data = await AppData.getUserData();
+      const user_id = user_data.user_id;
+
+      let value = 0;
+      // Logged in
+      if (user_id != null) {
+        value = 1;
+      }
+      // Admin
+      if (user_data.role === '1') {
+        value = 3;
+      }
+      // Same user
+      if (user_id === check_id) {
+        value = 2;
+      }
+      return {user_id: user_id, value: value};
+    } catch (exception) {
+      console.log(exception);
+      return 0;
+    }
   }
 
   static async login(screen) {
     try {
       screen.setState({message: false});
-      const username = screen.state.username;
+      const name = screen.state.name;
       const password = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         screen.state.password,
       );
 
       const response = await fetch(
-        `${
-          AppData.server
-        }/user/login?username=${username}&password=${password}`,
+        `${AppData.server}/user/login?name=${name}&password=${password}`,
         {method: 'post'},
       );
 
       const json = await response.json();
-      console.log(json);
-      if (json.status === 'success') {
-        AppData.setUserData({userid: json.userid, role: json.role});
-        screen.props.navigation.navigate('HomeTabs', {screen: 'Account'});
+
+      const user_data = {
+        user_id: json.user_id,
+        session_id: json.session_id,
+        role: json.role,
+      };
+
+      if (json.status) {
+        AppData.setUserData(user_data);
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'HomeTabs',
+                params: {user_data: user_data},
+              },
+            ],
+          }),
+        );
       } else {
         screen.setState({message: json.message});
       }
@@ -38,23 +85,37 @@ export default class UserController {
   static async register(screen) {
     try {
       screen.setState({message: false});
-      const username = screen.state.username;
+      const name = screen.state.name;
       const password = await Crypto.digestStringAsync(
         Crypto.CryptoDigestAlgorithm.SHA256,
         screen.state.password,
       );
 
       const response = await fetch(
-        `${
-          AppData.server
-        }/user/register?username=${username}&password=${password}`,
+        `${AppData.server}/user/register?name=${name}&password=${password}`,
         {method: 'post'},
       );
       const json = await response.json();
-      console.log(json);
-      if (json.status === 'success') {
-        AppData.setUserData({userid: json.userid, role: json.role});
-        screen.props.navigation.navigate('HomeTabs', {screen: 'Account'});
+
+      const user_data = {
+        user_id: json.user_id,
+        session_id: json.session_id,
+        role: json.role,
+      };
+
+      if (json.status) {
+        AppData.setUserData(user_data);
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'HomeTabs',
+                params: {screen: 'Account', user_data: user_data},
+              },
+            ],
+          }),
+        );
       } else {
         screen.setState({message: json.message});
       }
@@ -64,62 +125,40 @@ export default class UserController {
   }
 
   static async logout(screen) {
-    const check = await AppData.removeUserData();
-    if (check) {
-      screen.setState({isLoggedIn: false});
-    }
-  }
-
-  static async get(userid) {
     try {
-      if (userid === undefined) {
-        userid = (await AppData.getUserData()).userid;
-      }
-      const response = await fetch(
-        `${AppData.server}/user/get?userid=${userid}`,
-        {method: 'get'},
-      );
-      let json = await response.json();
-      if (!json) {
-        json = {username: '[đã xóa]'};
-      }
-      json.avatar = `${
-        AppData.server
-      }/user/avatar?userid=${userid}&t=${Date.now()}`;
-      return json;
-    } catch (exception) {
-      console.log(exception);
-      return null;
-    }
-  }
+      const session_id = (await AppData.getUserData()).session_id;
+      await fetch(`${AppData.server}/user/logout?session_id=${session_id}`, {
+        method: 'post',
+      });
 
-  static async list(page) {
-    try {
-      const adminid = (await AppData.getUserData()).userid;
-      const response = await fetch(
-        `${AppData.server}/user/list?adminid=${adminid}&page=${page}`,
-        {method: 'get'},
-      );
-      let json = await response.json();
-      return json;
+      const check = await AppData.removeUserData();
+      if (check) {
+        screen.props.navigation.dispatch(
+          CommonActions.reset({
+            index: 1,
+            routes: [
+              {
+                name: 'Login',
+              },
+            ],
+          }),
+        );
+      }
     } catch (exception) {
       console.log(exception);
     }
   }
 
-  static async search(username) {
+  static async profile(user_id) {
     try {
+      const viewer_id = (await AppData.getUserData()).user_id;
       const response = await fetch(
-        `${AppData.server}/user/search?username=${username}`,
+        `${AppData.server}/user/profile?user_id=${user_id}&viewer_id=${viewer_id}`,
         {method: 'get'},
       );
       let json = await response.json();
-      if (!json) {
-        return null;
-      }
-      console.log(json);
       // eslint-disable-next-line prettier/prettier
-      json.avatar = `${AppData.server}/user/avatar?userid=${json._id}&t=${Date.now()}`;
+      json.user.avatar = `${AppData.server}/user/avatar?user_id=${user_id}&t=${Date.now()}`;
       return json;
     } catch (exception) {
       console.log(exception);
@@ -127,65 +166,122 @@ export default class UserController {
     }
   }
 
-  static async checkPerm(checkid) {
+  static async search(user_id, user_name) {
     try {
-      const userdata = await AppData.getUserData();
-      const userid = userdata.userid;
-      let value = 0;
-      // Logged in
-      if (userid != null) {
-        value = 1;
+      let key;
+      if (user_id) {
+        key = `user_id=${user_id}`;
+      } else if (user_name) {
+        key = `user_name=${user_name}`;
       }
-      // Same user
-      if (userid === checkid) {
-        value = 2;
+      const response = await fetch(`${AppData.server}/user/search?${key}`, {
+        method: 'get',
+      });
+
+      let json = await response.json();
+      if (json) {
+        // eslint-disable-next-line prettier/prettier
+        json.avatar = `${AppData.server}/user/avatar?user_id=${json.user_id}&t=${Date.now()}`;
       }
-      // Admin
-      if (userdata.role === '1') {
-        value = 3;
-      }
-      return {userid: userid, value: value};
+      return json;
     } catch (exception) {
       console.log(exception);
-      return 0;
+      return null;
+    }
+  }
+
+  static async list(mode, page) {
+    try {
+      const user_data = await AppData.getUserData();
+      const session_id = user_data.session_id;
+      const user_id = user_data.user_id;
+
+      const response = await fetch(
+        `${AppData.server}/user/list?session_id=${session_id}&mode=${mode}&page=${page}&user_id=${user_id}`,
+        {method: 'get'},
+      );
+      let json = await response.json();
+
+      const time = Date.now();
+      json = json.map((user) => {
+        user.avatar = `${AppData.server}/user/avatar?user_id=${user.user_id}&t=${time}`;
+        return user;
+      });
+      return json;
+    } catch (exception) {
+      console.log(exception);
+      return null;
     }
   }
 
   static async edit(screen) {
     try {
-      screen.setState({message: false});
+      screen.setState({message: false, loading: true});
 
-      const userid = screen.state.user._id;
-      const username = screen.state.newUsername;
-      const password = screen.state.newPassword;
-      const avatar = screen.state.newAvatar;
+      const request = {};
+      request.session_id = (await AppData.getUserData()).session_id;
+      request.name = screen.state.new_name;
+      request.password = screen.state.new_password
+        ? await Crypto.digestStringAsync(
+            Crypto.CryptoDigestAlgorithm.SHA256,
+            screen.state.new_password,
+          )
+        : undefined;
+      const avatar = screen.state.new_avatar;
 
-      let request = `${AppData.server}/user/edit?userid=${userid}`;
-      let init = {method: 'post'};
-      if (username) {
-        request += `&username=${username}`;
-      }
-      if (password) {
-        request += `&password=${password}`;
-      }
+      const data = new FormData();
+      data.append('data', JSON.stringify(request));
       if (avatar) {
-        const data = new FormData();
         data.append('avatar', {
           name: avatar.fileName,
           type: avatar.type,
           uri: avatar.uri,
         });
-        init = {
-          method: 'post',
-          body: data,
-        };
       }
+      const init = {
+        method: 'post',
+        body: data,
+      };
 
-      const response = await fetch(request, init);
+      const response = await fetch(`${AppData.server}/user/edit`, init);
       const json = await response.json();
-      console.log(json);
-      if (json.status === 'success') {
-        screen.setState({error: false, message: 'Đã lưu thông tin cá nhân'});
+
+      if (json.status) {
+        screen.setState({
+          error: false,
+          loading: false,
+          message: 'Đã lưu thông tin cá nhân',
+        });
+      } else {
+        screen.setState({error: true, loading: false, message: json.message});
+      }
+    } catch (exception) {
+      console.log(exception);
+    }
+  }
+
+  static async friend(screen) {
+    try {
+      screen.setState({message: false});
+
+      const session_id = (await AppData.getUserData()).session_id;
+      const friend_id = screen.state.user.user_id;
+      const friended = screen.state.f2;
+      const action = friended ? 'unfriend' : 'friend';
+
+      const response = await fetch(
+        `${AppData.server}/user/${action}?session_id=${session_id}&friend_id=${friend_id}`,
+        {method: 'post'},
+      );
+
+      const json = await response.json();
+      if (json.status) {
+        screen.setState({
+          error: false,
+          message: json.message,
+          f1: json.f1,
+          f2: json.f2,
+        });
       } else {
         screen.setState({error: true, message: json.message});
       }
@@ -196,15 +292,16 @@ export default class UserController {
 
   static async delete(screen) {
     try {
-      const adminid = (await AppData.getUserData()).userid;
-      const deleteid = screen.state.delete;
+      const session_id = (await AppData.getUserData()).session_id;
+      const delete_id = screen.state.delete;
+      const hard = screen.state.hard ? '&hard=true' : '';
 
       const response = await fetch(
-        `${AppData.server}/user/delete?adminid=${adminid}&deleteid=${deleteid}`,
+        `${AppData.server}/user/delete?session_id=${session_id}&delete_id=${delete_id}${hard}`,
         {method: 'post'},
       );
       let json = await response.json();
-      if (json.status === 'success') {
+      if (json.status) {
         screen.setState({error: false, message: 'Đã xóa tài khoản'});
       } else {
         screen.setState({error: true, message: json.message});
@@ -212,46 +309,6 @@ export default class UserController {
     } catch (exception) {
       console.log(exception);
       return null;
-    }
-  }
-
-  static async follow(screen) {
-    try {
-      screen.setState({message: false});
-
-      const userid = (await AppData.getUserData()).userid;
-      const followid = screen.state.user._id;
-      let followed = screen.state.followed;
-
-      // eslint-disable-next-line prettier/prettier
-      let request = `${AppData.server}/user/follow?userid=${userid}&followid=${followid}`;
-      if (followed) {
-        // eslint-disable-next-line prettier/prettier
-        request = `${AppData.server}/user/unfollow?userid=${userid}&followid=${followid}`;
-      }
-
-      const response = await fetch(request, {method: 'post'});
-      const json = await response.json();
-      console.log(json);
-      if (json.status === 'success') {
-        let followers = screen.state.followers;
-        followed = !followed;
-        if (followed) {
-          followers.push(userid);
-        } else {
-          followers = followers.filter(follower => follower !== userid);
-        }
-        screen.setState({
-          error: false,
-          message: json.message,
-          followers: followers,
-          followed: followed,
-        });
-      } else {
-        screen.setState({error: true, message: json.message});
-      }
-    } catch (exception) {
-      console.log(exception);
     }
   }
 }

@@ -8,6 +8,10 @@ import moment from 'moment';
 import 'moment/locale/vi.js';
 moment.locale('vi');
 
+if (!__DEV__) {
+  console.log = () => null;
+}
+
 export default function Main() {
   return (
     <PaperProvider>

@@ -1,10 +1,8 @@
 import React, {Component} from 'react';
-import {ScrollView} from 'react-native-gesture-handler';
-import {View, RefreshControl, StyleSheet} from 'react-native';
+import {View, RefreshControl, StyleSheet, ScrollView} from 'react-native';
 import {Button, withTheme, Card} from 'react-native-paper';
 
-import ListPost from './components/ListPost';
-//import UserController from '../controllers/UserController';
+import ListPostComponent from './components/ListPostComponent';
 
 class HomeScreen extends Component {
   state = {refresh: false, mode: 'new'};
@@ -30,15 +28,15 @@ class HomeScreen extends Component {
             </Button>
             <Button
               icon="account-supervisor"
-              mode={this.state.mode === 'sub' ? 'contained' : 'text'}
+              mode={this.state.mode === 'friend' ? 'contained' : 'text'}
               style={styles.child}
-              onPress={() => this._onButtonToggle('sub')}>
-              Theo dõi
+              onPress={() => this._onButtonToggle('friend')}>
+              Bạn bè
             </Button>
           </View>
         </Card>
         <ScrollView
-          ref={r => {
+          ref={(r) => {
             this.scroll = r;
           }}
           refreshControl={
@@ -47,10 +45,10 @@ class HomeScreen extends Component {
               onRefresh={this._handleRefresh}
             />
           }>
-          <ListPost
+          <ListPostComponent
             mode={this.state.mode}
             navigation={this.props.navigation}
-            userid="check"
+            user_id={this.props.user_id}
             refresh={this.state.refresh}
             onFinishRefresh={this._finishRefresh}
             style={styles.full}
@@ -66,7 +64,7 @@ class HomeScreen extends Component {
   _finishRefresh = () => {
     this.setState({refresh: false});
   };
-  _onButtonToggle = value => {
+  _onButtonToggle = (value) => {
     if (this.state.mode === value) {
       this.scroll.scrollTo({x: 0, y: 0});
     } else {

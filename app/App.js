@@ -1,12 +1,9 @@
-import React, {Component} from 'react';
+import React from 'react';
 import {NavigationContainer} from '@react-navigation/native';
 import {createStackNavigator} from '@react-navigation/stack';
-import {createMaterialBottomTabNavigator} from '@react-navigation/material-bottom-tabs';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
-import HomeScreen from './screens/HomeScreen';
-import SearchScreen from './screens/SearchScreen';
-import AccountScreen from './screens/AccountScreen';
+import HomeTabs from './screens/components/HomeTabs';
+import WelcomeScreen from './screens/WelcomeScreen';
 import RegisterScreen from './screens/RegisterScreen';
 import LoginScreen from './screens/LoginScreen';
 import ViewUserScreen from './screens/ViewUserScreen';
@@ -16,56 +13,20 @@ import ViewPostScreen from './screens/ViewPostScreen';
 import EditPostScreen from './screens/EditPostScreen';
 import ViewTagScreen from './screens/ViewTagScreen';
 import ListUserScreen from './screens/ListUserScreen';
+import ManageUserScreen from './screens/ManageUserScreen';
+import ViewChatScreen from './screens/ViewChatScreen';
 
 const Stack = createStackNavigator();
-const Tab = createMaterialBottomTabNavigator();
-
-class HomeTabs extends Component {
-  render() {
-    return (
-      <Tab.Navigator
-        initialRouteName="Home"
-        backBehavior="initialRoute"
-        shifting={true}>
-        <Tab.Screen
-          name="Home"
-          component={HomeScreen}
-          options={{
-            title: 'Trang Chủ',
-            tabBarIcon: ({color}) => (
-              <MaterialCommunityIcons name="home" color={color} size={26} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Search"
-          component={SearchScreen}
-          options={{
-            title: 'Tìm Kiếm',
-            tabBarIcon: ({color}) => (
-              <MaterialCommunityIcons name="magnify" color={color} size={26} />
-            ),
-          }}
-        />
-        <Tab.Screen
-          name="Account"
-          component={AccountScreen}
-          options={{
-            title: 'Tài Khoản',
-            tabBarIcon: ({color}) => (
-              <MaterialCommunityIcons name="account" color={color} size={26} />
-            ),
-          }}
-        />
-      </Tab.Navigator>
-    );
-  }
-}
 
 export default function App() {
   return (
     <NavigationContainer>
       <Stack.Navigator>
+        <Stack.Screen
+          name="Welcome"
+          component={WelcomeScreen}
+          options={{headerShown: false}}
+        />
         <Stack.Screen
           name="HomeTabs"
           component={HomeTabs}
@@ -89,7 +50,12 @@ export default function App() {
         <Stack.Screen
           name="ListUser"
           component={ListUserScreen}
-          options={{title: 'Danh sách tài khoản'}}
+          options={{title: 'Danh sách người dùng'}}
+        />
+        <Stack.Screen
+          name="ManageUser"
+          component={ManageUserScreen}
+          options={{title: 'Quản lý người dùng'}}
         />
         <Stack.Screen
           name="EditUser"
@@ -115,6 +81,11 @@ export default function App() {
           name="ViewTag"
           component={ViewTagScreen}
           options={{title: 'Xem tag'}}
+        />
+        <Stack.Screen
+          name="ViewChat"
+          component={ViewChatScreen}
+          options={{title: 'Nhắn tin'}}
         />
       </Stack.Navigator>
     </NavigationContainer>

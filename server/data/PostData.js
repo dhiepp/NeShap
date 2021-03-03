@@ -1,88 +1,225 @@
-const { ObjectID } = require('mongodb');
-const Connection = require('./Connection');
+const Neo4j = require('./Neo4j');
+const sharp = require('sharp');
+const fs = require('fs');
 
 const UserData = require('./UserData');
+const NotificationService = require('../services/NotificationService');
 
 module.exports = class PostData {
-	static async getByID(postid, projection) {
-		try {
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.findOne({ _id: new ObjectID(postid) }, { projection: projection });
-			return result;
-		}
-		catch (exception) {
-			return null;
-		}
+	static async getByPostID(post_id) {
+		if (!post_id) return null;
+		const result = await Neo4j.run('MATCH (p:Post {post_id: $postParam}) RETURN p LIMIT 1',
+			{ postParam: post_id });
+		return result.records[0]?.get('p')?.properties;
 	}
-	static async checkExistByID(postid) {
+
+	static async check(user_id, post_id) {
+		if (!user_id || !post_id) return false;
+
+		const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})
+			OPTIONAL MATCH (u)-[r:WRITES_POST]->(p:Post {post_id: $postParam}) 
+			RETURN u.role, r LIMIT 1`, { userParam: user_id, postParam: post_id });
+		const record = result.records[0];
+		if (record?.get('u.role') > 0) return true;
+		if (record?.get('r')) return true;
+		return false;
+	}
+
+	static async write(data_string, cover) {
 		try {
-			if (await this.getByID(postid, { _id: 1 })) return true;
-			return false;
+			const data = JSON.parse(data_string);
+			const session_id = data.session_id;
+			const title = data.title;
+			const content = data.content;
+			const tags = data.tags;
+
+			const user_id = await UserData.verify(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+			}
+			if (!title || !content) {
+				return { status: false, message: 'Yêu cầu nhập tiêu đề và nội dung bài viết!' };
+			}
+			if (tags) {
+				for (const tag of tags) {
+					if (!tag.match(/^[0-9a-zA-Z]{3,20}$/)) {
+						return { status: false, message: 'Tag không hợp lệ!' };
+					}
+				}
+			}
+
+			const has_cover = cover ? true : false;
+			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) CREATE (u)-[:WRITES_POST]->(p:Post 
+				{post_id: randomUUID(), title: $titleParam, content: $contentParam, time: datetime(),
+				has_cover: $coverParam, tags: $tagsParam, likes: 0, comments: 0}) RETURN p.post_id`,
+			{ userParam: user_id, titleParam: title, contentParam: content, coverParam: has_cover, tagsParam: tags });
+			const post_id = result.records[0]?.get('p.post_id');
+			if (!post_id) throw 'Post Write failed';
+
+			if (cover) {
+				await sharp(cover)
+					.resize({ width: 1600, height: 900, fit: 'contain', position: 'center', background: '#ffffff' })
+					.jpeg({ quality: 50, force: true }).toFile(`./images/cover/${post_id}.jpg`);
+			}
+
+			return { status: true, post_id: post_id };
 		}
 		catch (exception) {
 			console.log(exception);
-			return false;
+			return { status: false, message: 'Không thể viết bài mới!' };
+		}
+	}
+
+	static async edit(data_string, cover) {
+		try {
+			const data = JSON.parse(data_string);
+			const session_id = data.session_id;
+			const post_id = data.post_id;
+			const title = data.title;
+			const content = data.content;
+			const tags = data.tags;
+
+			const user_id = await UserData.verify(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+			}
+			if (!await this.check(user_id, post_id)) {
+				return { status: false, message: 'Không có quyền sửa hoặc bài viết không tồn tại!' };
+			}
+			if (!title || !content) {
+				return { status: false, message: 'Yêu cầu nhập tiêu đề và nội dung bài viết!' };
+			}
+			if (tags) {
+				for (const tag of tags) {
+					if (!tag.match(/^[0-9a-zA-Z]{3,20}$/)) {
+						return { status: false, message: 'Tag không hợp lệ!' };
+					}
+				}
+			}
+
+			const edit_cover = cover ? ' p.has_cover = true,' : '';
+			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam}) SET p.title = $titleParam, 
+				p.content = $contentParam,${edit_cover} p.tags = $tagsParam RETURN p.post_id`,
+			{ postParam: post_id, titleParam: title, contentParam: content, tagsParam: tags });
+			if (result.summary.counters.updates().propertiesSet == 0) throw 'Post Edit failed';
+
+			if (cover) {
+				await sharp(cover)
+					.resize({ width: 1600, height: 900, fit: 'contain', position: 'center', background: '#ffffff' })
+					.jpeg({ quality: 50, force: true }).toFile(`./images/cover/${post_id}.jpg`);
+			}
+
+			return { status: true, post_id: post_id };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: false, message: 'Không thể sửa bài viết!' };
+		}
+	}
+
+	static async delete(query) {
+		try {
+			const session_id = query.session_id;
+			const post_id = query.post_id;
+
+			const user_id = await UserData.verify(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
+			}
+			if (!await this.check(user_id, post_id)) {
+				return { status: false, message: 'Không có quyền xóa hoặc bài viết không tồn tại!' };
+			}
+
+			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam}) 
+				OPTIONAL MATCH (p)-[:HAS_COMMENT]-(c:Comment) DETACH DELETE p, c`,
+			{ postParam: post_id });
+			if (result.summary.counters.updates().deletedNodes == 0) {
+				return { status: false, message: 'Bài viết không bị xóa!' };
+			}
+
+			fs.unlink(`./images/cover/${post_id}.jpg`, () => null);
+			return { status: true };
+		}
+		catch (exception) {
+			console.log(exception);
+			return { status: false, message: 'Không thể xóa bài viết!' };
 		}
 	}
 
 	static async list(query) {
 		try {
 			const mode = query.mode;
-			const userid = query.userid;
 			const page = query.page;
-			const key = query.key;
+			const user_id = query.user_id;
+			const key = query.key?.toLowerCase();
 
-			const postCollection = await Connection.getCollection('post');
-			let cursor = null;
+			const skip = Neo4j.int((page - 1) * 10);
+			const limit = Neo4j.int(10);
+			let records;
 			switch (mode) {
+			case 'new': {
+				const result = await Neo4j.run(`MATCH (p:Post) OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				{ skip: skip, limit: limit });
+				records = result.records;
+				break;
+			}
 			case 'hot': {
-				const limit = new Date();
-				limit.setDate(limit.getDate() - 7);
-				cursor = await postCollection.find({ time: { $gt: limit } },
-					{ sort: { rating: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
+				const time = new Date();
+				time.setDate(time.getDate() - 30);
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE p.time > datetime($timeParam) 
+					OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.likes + p.comments DESC SKIP $skip LIMIT $limit`,
+				{ timeParam: time.toISOString(), skip: skip, limit: limit });
+				records = result.records;
 				break;
 			}
-			case 'sub': {
-				if (userid === undefined) return [];
-				const following = await UserData.listFollowing(userid);
-				if (following !== undefined) {
-					cursor = await postCollection.find({ authorid: { $in: following } },
-						{ sort: { time: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
-				}
+			case 'friend': {
+				if (!user_id) return [];
+				const result = await Neo4j.run(`MATCH (:User {user_id: $userParam})-[:FRIENDS]->(a:User)-[:WRITES_POST]->(p:Post) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				{ userParam: user_id, skip: skip, limit: limit });
+				records = result.records;
 				break;
 			}
-			case 'src': {
-				if (key.length < 3) {
-					return [];
-				}
-				const regex = new RegExp(`\\b(${key})\\b`, 'i');
-				cursor = await postCollection.find({ $or: [{ title: { $regex: regex } }, { content: { $regex: regex } }] },
-					{ sort: { time: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
+			case 'search': {
+				if (key.length < 3) return[];
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE toLower(p.title) CONTAINS $keyParam 
+					OR toLower(p.content) CONTAINS $keyParam OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				{ keyParam: key, skip: skip, limit: limit });
+				records = result.records;
 				break;
 			}
 			case 'tag': {
-				cursor = await postCollection.find({ tags: { $elemMatch: { $eq: key } } },
-					{ sort: { time: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
+				if (!key.match(/^[0-9a-zA-Z]{3,20}$/)) return [];
+				const result = await Neo4j.run(`MATCH (p:Post) WHERE $keyParam IN p.tags OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				{ keyParam: key, skip: skip, limit: limit });
+				records = result.records;
 				break;
 			}
-			case 'pro': {
-				if (userid === undefined) return [];
-				cursor = await postCollection.find({ authorid: new ObjectID(userid) },
-					{ sort: { time: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
+			case 'profile': {
+				if (!user_id) return [];
+				const result = await Neo4j.run(`MATCH (a:User {user_id: $userParam})-[:WRITES_POST]->(p:Post) 
+					RETURN p, a ORDER BY p.time DESC SKIP $skip LIMIT $limit`,
+				{ userParam: user_id, skip: skip, limit: limit });
+				records = result.records;
 				break;
 			}
-			// Default = list new
-			default: {
-				cursor = await postCollection.find({},
-					{ sort: { time: -1 }, skip: 10 * (page - 1), limit: 10, projection: { cover: false, comments: false } });
-			}
+			default: return [];
 			}
 
-			let result = [];
-			if (cursor !== null) {
-				result = await cursor.toArray();
-			}
-			return result;
+			const posts = records.map(record => {
+				const post = record.get('p')?.properties;
+				const author = record.get('a')?.properties;
+				post.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
+				post.likes = Neo4j.int(post.likes).toInt();
+				post.comments = Neo4j.int(post.comments).toInt();
+				post.time = post.time.toString();
+				return post;
+			});
+			return posts;
 		}
 		catch (exception) {
 			console.log(exception);
@@ -90,206 +227,79 @@ module.exports = class PostData {
 		}
 	}
 
-	static async write(data, cover) {
+	static async detail(query) {
 		try {
-			if (data === undefined) {
-				return { status: 'fail', message: 'Không hợp lệ!' };
-			}
-			data = JSON.parse(data);
+			const post_id = query.post_id ? query.post_id : null;
+			const viewer_id = query.viewer_id ? query.viewer_id : null;
 
-			const authorid = data.authorid;
-			const title = data.title;
-			const content = data.content;
-			const tags = data.tags;
+			const result = await Neo4j.run(`MATCH (p:Post {post_id: $postParam}) 
+				OPTIONAL MATCH (a:User)-[:WRITES_POST]->(p) OPTIONAL MATCH (v:User {user_id: $viewerParam})-[:LIKES]->(p) 
+				RETURN p, a, v`,
+			{ postParam: post_id, viewerParam: viewer_id });
+			const record = result.records[0];
+			if (!record) return null;
 
-			if (!await UserData.checkExistByID(authorid)) {
-				return { status: 'fail', message: 'User ID không tồn tại!' };
-			}
-			if (!title || !content) {
-				return { status: 'fail', message: 'Chưa nhập đầy đủ thông tin!' };
-			}
-			for (const tag of tags) {
-				if (!tag.match(/^[0-9a-zA-Z]{3,20}$/)) {
-					return { status: 'fail', message: 'Tags không hợp lệ!' };
-				}
-			}
-
-			const time = new Date();
-			const insert = { authorid: new ObjectID(authorid), title: title, hasCover:false, content: content, time: time, tags: tags, rating: 0 };
-			if (cover) {
-				insert.cover = cover;
-				insert.hasCover = true;
-			}
-
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.insertOne(insert);
-			return { status: 'success', postid: result.insertedId };
+			const post = record.get('p')?.properties;
+			const author = record.get('a')?.properties;
+			post.author = author ? { user_id : author.user_id, name: author.name } : { name: '[đã xóa]' };
+			post.likes = Neo4j.int(post.likes).toInt();
+			post.comments = Neo4j.int(post.comments).toInt();
+			post.time = post.time.toString();
+			post.liked = record.get('v') ? true : false;
+			return post;
 		}
 		catch (exception) {
 			console.log(exception);
-			return { status: 'fail', message: 'Không thể viết bài mới!' };
-		}
-	}
-	static async edit(data, cover) {
-		try {
-			if (data === undefined) {
-				return { status: 'fail', message: 'Không hợp lệ!' };
-			}
-			data = JSON.parse(data);
-
-			const userid = data.userid;
-			const postid = data.postid;
-			const title = data.title;
-			const content = data.content;
-			const tags = data.tags;
-			const set = {};
-
-			const post = await this.getByID(postid);
-			if (!post) {
-				return { status: 'fail', message: 'Bài viết không tồn tại!' };
-			}
-			if (UserData.checkPerm(userid, post.authorid) < 2) {
-				return { status: 'fail', message: 'Không có quyền sửa bài viết!' };
-			}
-			if (!title && !content && !tags && !cover) {
-				return { status: 'fail', message: 'Thông tin bài viết không thay đổi!' };
-			}
-			if (title) {
-				set.title = title;
-			}
-			if (content) {
-				set.content = content;
-			}
-			if (tags) {
-				for (const tag in tags) {
-					if (!tag.match(/^[0-9a-zA-Z,]*$/)) {
-						return { status: 'fail', message: 'Tags không hợp lệ!' };
-					}
-				}
-				set.tags = tags;
-			}
-			if (cover) {
-				set.cover = cover;
-				set.hasCover = true;
-			}
-
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.updateOne({ _id: new ObjectID(postid) }, { $set: set });
-			if (result.modifiedCount === 0) {
-				return { status: 'fail', message: 'Bài viết không thay đổi!' };
-			}
-			return { status: 'success' };
-		}
-		catch (exception) {
-			console.log(exception);
-			return { status: 'fail', message: 'Không thể sửa bài viết!' };
-		}
-	}
-	static async delete(data) {
-		try {
-			if (data === undefined) {
-				return { status: 'fail', message: 'Không hợp lệ!' };
-			}
-
-			const userid = data.userid;
-			const postid = data.postid;
-
-			const post = await this.getByID(postid);
-			if (!post) {
-				return { status: 'fail', message: 'Bài viết không tồn tại!' };
-			}
-			if (UserData.checkPerm(userid, post.authorid) < 2) {
-				return { status: 'fail', message: 'Không có quyền xóa bài viết!' };
-			}
-
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.deleteOne({ _id: new ObjectID(postid) });
-			if (result.modifiedCount === 0) {
-				return { status: 'fail', message: 'Bài viết không bị xóa!' };
-			}
-			return { status: 'success' };
-		}
-		catch (exception) {
-			console.log(exception);
-			return { status: 'fail', message: 'Không thể xóa bài viết!' };
+			return null;
 		}
 	}
 
 	static async like(query) {
 		try {
-			const userid = query.userid;
-			const postid = query.postid;
+			const session_id = query.session_id;
+			const post_id = query.post_id ? query.post_id : null;
 
-			const post = await this.getByID(postid, { likes: true, dislikes: true });
-
-			if (!post) {
-				return { status: 'fail', message: 'Bài viết không tồn tại!' };
-			}
-			if (!UserData.checkExistByID(userid)) {
-				return { status: 'fail', message: 'Không thể đánh giá!' };
+			const user_id = await UserData.verify(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
 			}
 
-			let action = { $push: { likes: userid }, $inc: { rating: 1 } };
-			let liked = true;
-			// Unlike
-			if (post.likes && post.likes.includes(userid)) {
-				action = { $pull: { likes: userid }, $inc: { rating: -1 } };
-				liked = false;
-			}
-			// Switch
-			if (post.dislikes && post.dislikes.includes(userid)) {
-				action = { $push: { likes: userid }, $pull: { dislikes: userid }, $inc: { rating: 2 } };
-			}
+			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam}) MATCH (p:Post {post_id: $postParam}) 
+				MERGE (u)-[r:LIKES]->(p) ON CREATE SET p.likes = p.likes + 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
+			if (result.summary.counters.updates().relationshipsCreated == 0) throw 'Post like failed!';
 
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.updateOne({ _id: new ObjectID(postid) }, action);
-			if (result.modifiedCount === 0) {
-				return { status: 'fail', message: 'Không thể đánh giá!' };
-			}
-			return { status: 'success', liked: liked };
+			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
+			NotificationService.from_post(user_id, post_id, 'like', likes);
+
+			return { status: true, likes: likes };
 		}
 		catch (exception) {
 			console.log(exception);
-			return { status: 'fail', message: 'Không thể đánh giá!' };
+			return { status: false, message: 'Không thể thích bài viết!' };
 		}
 	}
 
-	static async dislike(query) {
+	static async unlike(query) {
 		try {
-			const userid = query.userid;
-			const postid = query.postid;
+			const session_id = query.session_id;
+			const post_id = query.post_id ? query.post_id : null;
 
-			const post = await this.getByID(postid, { likes: true, dislikes: true });
-
-			if (!post) {
-				return { status: 'fail', message: 'Bài viết không tồn tại!' };
-			}
-			if (!UserData.checkExistByID(userid)) {
-				return { status: 'fail', message: 'Không thể đánh giá!' };
+			const user_id = await UserData.verify(session_id);
+			if (!user_id) {
+				return { status: false, message: 'Phiên đăng nhập không hợp lệ!' };
 			}
 
-			let action = { $push: { dislikes: userid }, $inc: { rating: -1 } };
-			let disliked = true;
-			// Undislike
-			if (post.dislikes && post.dislikes.includes(userid)) {
-				action = { $pull: { dislikes: userid }, $inc: { rating: 1 } };
-				disliked = false;
-			}
-			// Switch
-			if (post.likes && post.likes.includes(userid)) {
-				action = { $push: { dislikes: userid }, $pull: { likes: userid }, $inc: { rating: -2 } };
-			}
+			const result = await Neo4j.run(`MATCH (u:User {user_id: $userParam})-[r:LIKES]->(p:Post {post_id: $postParam}) 
+				DELETE r SET p.likes = p.likes - 1 RETURN p.likes`, { userParam: user_id, postParam: post_id });
+			if (result.summary.counters.updates().relationshipsDeleted == 0) throw 'Post unlike failed!';
 
-			const postCollection = await Connection.getCollection('post');
-			const result = await postCollection.updateOne({ _id: new ObjectID(postid) }, action);
-			if (result.modifiedCount === 0) {
-				return { status: 'fail', message: 'Không thể đánh giá!' };
-			}
-			return { status: 'success', disliked: disliked };
+			const likes = Neo4j.int(result.records[0]?.get('p.likes')).toInt();
+			return { status: true, likes: likes };
 		}
 		catch (exception) {
 			console.log(exception);
-			return { status: 'fail', message: 'Không thể đánh giá!' };
+			return { status: false, message: 'Không thể bỏ thích bài viết!' };
 		}
 	}
+
 };

@@ -1,66 +1,52 @@
 import React, {Component} from 'react';
-import {StyleSheet, Image, ImageBackground} from 'react-native';
+import {StyleSheet, View} from 'react-native';
 import {
+  ActivityIndicator,
   Colors,
   Button,
   Card,
-  ActivityIndicator,
-  Headline,
+  Avatar,
+  Title,
 } from 'react-native-paper';
 
 import UserController from '../controllers/UserController';
-import * as AppData from '../AppData';
 
 export default class AccountScreen extends Component {
-  state = {loading: true, active: true};
+  state = {loading: true};
   async componentDidMount() {
-    this._navListener = this.props.navigation.addListener('focus', async () => {
-      if (this.state.active) {
-        const userdata = await AppData.getUserData();
-        if (userdata.userid == null) {
-          this.setState({isLoggedIn: false});
-        } else {
-          this.setState({isLoggedIn: true, role: userdata.role});
-        }
-        this.setState({loading: false});
-      }
-    });
+    await this.loadUser();
   }
-  componentWillUnmount() {
-    this.setState({active: false});
-    this._navListener;
-  }
+
   render() {
-    if (this.route !== undefined) {
-      this.setState({isLoggedIn: true, loading: false});
-    }
     if (this.state.loading) {
       return <ActivityIndicator size="large" style={styles.full} />;
     }
-    if (this.state.isLoggedIn) {
-      return <this.LoggedInView />;
-    } else {
-      return <this.NotLoggedInView />;
-    }
-  }
-
-  LoggedInView = () => {
     return (
-      <ImageBackground
-        source={require('./static/background.png')}
-        style={styles.full}>
-        <Image source={require('./static/logo.png')} style={styles.logo} />
+      <View style={styles.full}>
         <Card style={styles.box}>
+          <Avatar.Image
+            size={96}
+            source={{uri: this.state.user.avatar}}
+            style={styles.avatar}
+          />
+          <Title style={styles.title}>{this.state.user.name}</Title>
           <Button
+            mode="contained"
             icon="account"
             style={styles.child}
-            onPress={() => this.props.navigation.navigate('ViewUser')}>
+            onPress={this._handleProfile}>
             Xem trang cá nhân
           </Button>
+        </Card>
+        <Card style={styles.box}>
           <Button
             icon="account-edit"
             style={styles.child}
-            onPress={() => this.props.navigation.navigate('EditUser')}>
+            onPress={() =>
+              this.props.navigation.navigate('EditUser', {
+                user_id: this.state.user.user_id,
+              })
+            }>
             Sửa thông tin cá nhân
           </Button>
           <Button
@@ -69,12 +55,20 @@ export default class AccountScreen extends Component {
             onPress={() => this.props.navigation.navigate('WritePost')}>
             Đăng bài viết mới
           </Button>
-          {this.state.role === '1' && (
+          <Button
+            icon="account-multiple"
+            style={styles.child}
+            onPress={() =>
+              this.props.navigation.navigate('ListUser', {mode: 'friend'})
+            }>
+            Xem danh sách bạn bè
+          </Button>
+          {this.state.user.role === 1 && (
             <Button
               color={Colors.redA200}
               icon="briefcase-account"
               style={styles.child}
-              onPress={() => this.props.navigation.navigate('ListUser')}>
+              onPress={() => this.props.navigation.navigate('ManageUser')}>
               Quản lý người dùng
             </Button>
           )}
@@ -85,32 +79,25 @@ export default class AccountScreen extends Component {
             Đăng xuất
           </Button>
         </Card>
-      </ImageBackground>
+      </View>
     );
-  };
-  NotLoggedInView = () => {
-    return (
-      <ImageBackground
-        source={require('./static/background.png')}
-        style={styles.full}>
-        <Image source={require('./static/logo.png')} style={styles.logo} />
-        <Card style={styles.box}>
-          <Headline style={styles.title}>Bạn chưa đăng nhập!</Headline>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Login')}>
-            Đăng nhập
-          </Button>
-          <Button
-            style={styles.child}
-            onPress={() => this.props.navigation.navigate('Register')}>
-            Đăng ký
-          </Button>
-        </Card>
-      </ImageBackground>
-    );
-  };
+  }
 
+  async loadUser() {
+    const user_id = this.props.user_id;
+    const user = await UserController.search(user_id);
+    if (!user) {
+      this._handleLogout();
+      return;
+    }
+    this.setState({loading: false, user: user});
+  }
+  _handleProfile = () => {
+    this.loadUser();
+    this.props.navigation.navigate('ViewUser', {
+      user_id: this.state.user.user_id,
+    });
+  };
   _handleLogout = () => {
     UserController.logout(this);
   };
@@ -122,23 +109,24 @@ const styles = StyleSheet.create({
     flexDirection: 'column',
     justifyContent: 'center',
   },
-  logo: {
-    alignSelf: 'center',
-    width: '80%',
-    height: '20%',
-    resizeMode: 'contain',
-  },
   box: {
     margin: 20,
+    marginTop: 5,
+    marginBottom: 5,
     padding: 10,
     justifyContent: 'center',
-  },
-  title: {
-    margin: 10,
-    textAlign: 'center',
   },
   child: {
     margin: 5,
     textAlign: 'center',
+  },
+  avatar: {
+    margin: 10,
+    alignSelf: 'center',
+  },
+  title: {
+    margin: 10,
+    textAlign: 'center',
+    textAlignVertical: 'center',
   },
 });

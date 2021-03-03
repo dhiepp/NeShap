@@ -19,16 +19,17 @@ export default class EditUserScreen extends Component {
   state = {
     loading: true,
     message: false,
-    newAvatar: false,
-    newUsername: '',
-    newPassword: '',
+    new_avatar: false,
+    new_name: '',
+    new_password: '',
   };
   async componentDidMount() {
-    const userid = this.props.route.params
-      ? this.props.route.params.userid
-      : undefined;
-    const user = await UserController.get(userid);
-    this.setState({loading: false, user: user});
+    const user_id = this.props.route.params?.user_id;
+    const user = await UserController.search(user_id);
+    this.setState({
+      loading: false,
+      user: user,
+    });
   }
   render() {
     if (this.state.loading) {
@@ -42,12 +43,13 @@ export default class EditUserScreen extends Component {
             <Avatar.Image
               size={96}
               source={{
-                uri: this.state.newAvatar
-                  ? this.state.newAvatar.uri
+                uri: this.state.new_avatar
+                  ? this.state.new_avatar.uri
                   : this.state.user.avatar,
               }}
               style={styles.avatar}
             />
+            <Title style={styles.title}>{this.state.user.name}</Title>
             <Button
               mode="contained"
               icon="account-box"
@@ -61,16 +63,15 @@ export default class EditUserScreen extends Component {
               label="Tên đăng nhập"
               mode="outlined"
               maxLength={20}
-              defaultValue={this.state.user.username}
               style={styles.child}
-              onChangeText={text => this.setState({newUsername: text})}
+              onChangeText={(text) => this.setState({new_name: text})}
             />
             <TextInput
               label="Mật khẩu"
               mode="outlined"
               secureTextEntry={true}
               style={styles.child}
-              onChangeText={text => this.setState({newPassword: text})}
+              onChangeText={(text) => this.setState({new_password: text})}
             />
             <Button
               mode="contained"
@@ -95,9 +96,9 @@ export default class EditUserScreen extends Component {
   }
 
   _handleImagePicker = () => {
-    ImagePicker.showImagePicker(response => {
+    ImagePicker.showImagePicker((response) => {
       if (response.didCancel === undefined) {
-        this.setState({newAvatar: response});
+        this.setState({new_avatar: response});
       }
     });
   };
