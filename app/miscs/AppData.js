@@ -51,7 +51,6 @@ export async function removeUserData() {
   }
 }
 
-// const server = 'http://10.0.2.2:6969';
-const server = 'http://neshap.3fmc.com';
+const server = 'http://10.0.2.2:6969';
 
 export {server};

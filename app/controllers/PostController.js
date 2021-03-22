@@ -1,5 +1,3 @@
-import {CommonActions} from '@react-navigation/native';
-
 import * as AppData from '../miscs/AppData';
 import * as TimeUtils from '../miscs/TimeUtils';
 
@@ -40,15 +38,7 @@ export default class PostController {
       const json = await response.json();
 
       if (json.status) {
-        screen.props.navigation.dispatch(
-          CommonActions.reset({
-            index: 1,
-            routes: [
-              {name: 'HomeTabs'},
-              {name: 'ViewPost', params: {post_id: json.post_id}},
-            ],
-          }),
-        );
+        screen.props.navigation.navigate('HomeTabs', {screen: 'Home'});
       } else {
         screen.setState({error: true, loading: false, message: json.message});
       }
